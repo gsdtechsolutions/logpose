@@ -1,6 +1,7 @@
 import { RiSettings3Line } from "@remixicon/react";
 import { StripeFeatureCard } from "./components/StripeFeatureCard";
 import { ResetSalesCard } from "./components/ResetSalesCard";
+import { MockModeCard } from "./components/MockModeCard";
 
 export default function AdvancedSettingsPage() {
   return (
@@ -22,6 +23,7 @@ export default function AdvancedSettingsPage() {
       <div className="grid gap-6 lg:grid-cols-2">
         <StripeFeatureCard />
         <ResetSalesCard />
+        <MockModeCard />
       </div>
     </div>
   );

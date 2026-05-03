@@ -37,8 +37,8 @@ export const INITIAL_BULK_DATA: BulkEditData = {
 };
 
 export interface CampaignFormState {
-  // Step 0 — Conta de anúncio
-  accountId: number | null;
+  // Step 0 — Contas de anúncio (multi-select)
+  accountIds: number[];
   videoId: string;
   videoLabel: string;
   checkoutId: string;
@@ -74,7 +74,7 @@ export interface CampaignFormState {
 }
 
 const INITIAL_STATE: CampaignFormState = {
-  accountId: null,
+  accountIds: [],
   videoId: "",
   videoLabel: "",
   checkoutId: "",

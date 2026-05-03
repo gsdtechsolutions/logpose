@@ -27,12 +27,15 @@ export default function CampaignsCreatePage() {
   const { pages, instagramAccounts, load: loadPages } = usePages();
   const { results: interests, search: searchInterest } = useInterestSearch();
 
+  // Primary account = first selected (used for fetching meta data)
+  const primaryAccountId = form.accountIds[0] ?? null;
+
   useEffect(() => {
-    if (form.accountId) {
-      loadPixels(form.accountId);
-      loadPages(form.accountId);
+    if (primaryAccountId) {
+      loadPixels(primaryAccountId);
+      loadPages(primaryAccountId);
     }
-  }, [form.accountId, loadPixels, loadPages]);
+  }, [primaryAccountId, loadPixels, loadPages]);
 
   // Aplicar dados duplicados recebidos via navigation state
   useEffect(() => {
@@ -41,21 +44,37 @@ export default function CampaignsCreatePage() {
       duplicateApplied.current = true;
       applyDataToForm(state.duplicateData, updateField);
       toast.success("Campanha duplicada! Revise os dados e adicione as mídias.");
-      // Limpar o state para evitar re-aplicação ao navegar
       window.history.replaceState({}, "");
     }
   }, [location.state, updateField]);
 
-  // Validação por step — define se o step está preenchido
+  // ─── Account multi-select handlers ─────────────────────────────────
+  const handleToggleAccount = useCallback((id: number) => {
+    updateField(
+      "accountIds",
+      form.accountIds.includes(id)
+        ? form.accountIds.filter((a) => a !== id)
+        : [...form.accountIds, id]
+    );
+  }, [form.accountIds, updateField]);
+
+  const handleSelectAll = useCallback(() => {
+    updateField("accountIds", accounts.map((a) => a.id));
+  }, [accounts, updateField]);
+
+  const handleClearAll = useCallback(() => {
+    updateField("accountIds", []);
+  }, [updateField]);
+
+  // Validação por step
   const isStepValid = useCallback((step: number): boolean => {
-    if (step === 0) return !!form.accountId;
+    if (step === 0) return form.accountIds.length > 0;
     if (step === 1) return !!form.campaignName && form.dailyBudget > 0;
     if (step === 2) return !!form.pixelId && !!form.pageId;
     if (step === 3) return form.ads.length > 0;
     return true;
   }, [form]);
 
-  // Calcula o step máximo que o usuário pode acessar
   const maxReachedStep = useMemo(() => {
     for (let i = 0; i <= 4; i++) {
       if (!isStepValid(i)) return i;
@@ -63,7 +82,6 @@ export default function CampaignsCreatePage() {
     return 4;
   }, [isStepValid]);
 
-  // goToStep com validação — só permite ir a steps <= maxReachedStep
   const safeGoToStep = useCallback((step: number) => {
     if (step <= maxReachedStep) goToStep(step);
   }, [maxReachedStep, goToStep]);
@@ -79,12 +97,19 @@ export default function CampaignsCreatePage() {
         extra_params: ad.extra_params, cta_type: ad.cta_type,
         media_type: ad.media_type, media_index: i,
       }));
-      const payload = { ...buildExportPayload(form), account_id: form.accountId, campaign_count: form.campaignCount, ads };
+      const payload = {
+        ...buildExportPayload(form),
+        account_ids: form.accountIds,
+        campaign_count: form.campaignCount,
+        ads,
+      };
       const result = await publishCampaign(payload, files);
       if (result.success) {
         const camps = result.campaigns_created ?? 1;
+        const accs = form.accountIds.length;
+        const accsLabel = accs > 1 ? ` em ${accs} contas` : "";
         const plural = camps > 1 ? `${camps} campanhas` : "1 campanha";
-        toast.success(`${plural} criada(s)! ${result.ads_created} anúncio(s) publicados.`);
+        toast.success(`${plural} criada(s)${accsLabel}! ${result.ads_created} anúncio(s) publicados.`);
         resetForm();
         navigate("/campaigns");
       } else {
@@ -108,6 +133,11 @@ export default function CampaignsCreatePage() {
           <span className="font-mono text-sm bg-muted px-2.5 py-1 rounded-md text-muted-foreground tracking-wide">
             {form.campaignCount}-{maxReachedStep >= 2 ? form.adsetCount : "x"}-{form.ads.length > 0 ? form.ads.length : "x"}
           </span>
+          {form.accountIds.length > 1 && (
+            <span className="font-mono text-xs bg-primary/10 text-primary px-2 py-1 rounded-md">
+              ×{form.accountIds.length} contas
+            </span>
+          )}
         </div>
         <div className="flex gap-2">
           <Button variant="outline" size="sm" onClick={() => handleImportCampaign(updateField)}>
@@ -123,20 +153,27 @@ export default function CampaignsCreatePage() {
 
       <div className="min-h-[400px] overflow-auto">
         {currentStep === 0 && (
-          <AccountStep accounts={accounts} selectedAccountId={form.accountId}
-            onSelect={(id) => updateField("accountId", id)} onUpdate={updateField}
-            form={form} isLoading={accountsLoading} />
+          <AccountStep
+            accounts={accounts}
+            selectedAccountIds={form.accountIds}
+            onToggleAccount={handleToggleAccount}
+            onSelectAll={handleSelectAll}
+            onClearAll={handleClearAll}
+            onUpdate={updateField}
+            form={form}
+            isLoading={accountsLoading}
+          />
         )}
         {currentStep === 1 && <CampaignStep form={form} onUpdate={updateField} />}
         {currentStep === 2 && (
           <AdSetStep form={form} onUpdate={updateField} pixels={pixels} pages={pages}
             instagramAccounts={instagramAccounts}
-            interestResults={interests} onSearchInterest={(q) => form.accountId && searchInterest(form.accountId, q)} />
+            interestResults={interests} onSearchInterest={(q) => primaryAccountId && searchInterest(primaryAccountId, q)} />
         )}
         {currentStep === 3 && (
           <AdsStep form={form} onUpdate={updateField} onAddAd={addAd} onUpdateAd={updateAd} onRemoveAd={removeAd} onUpdateBulk={updateBulkData} />
         )}
-        {currentStep === 4 && <ReviewStep form={form} onUpdate={updateField} />}
+        {currentStep === 4 && <ReviewStep form={form} onUpdate={updateField} accounts={accounts} />}
       </div>
 
       <div className="flex justify-between pt-2 border-t">

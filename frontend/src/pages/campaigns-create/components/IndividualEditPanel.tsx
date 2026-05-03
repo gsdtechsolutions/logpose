@@ -10,21 +10,6 @@ interface IndividualEditPanelProps {
   onUpdateAd: (index: number, data: Partial<AdFormData>) => void;
 }
 
-/** Extrai URL base sem query params */
-function stripQueryParams(url: string): string {
-  try {
-    const parsed = new URL(url);
-    return `${parsed.origin}${parsed.pathname}`;
-  } catch {
-    const idx = url.indexOf("?");
-    return idx >= 0 ? url.slice(0, idx) : url;
-  }
-}
-
-function hasQueryParams(url: string): boolean {
-  return url.includes("?");
-}
-
 export function IndividualEditPanel({ form, onUpdateAd }: IndividualEditPanelProps) {
   const [activeTab, setActiveTab] = useState(0);
   const [showExtra, setShowExtra] = useState(false);
@@ -55,14 +40,6 @@ export function IndividualEditPanel({ form, onUpdateAd }: IndividualEditPanelPro
     }
     setActiveTab(newIndex);
   }, [activeTab, form.ads, onUpdateAd]);
-
-  const handleLinkChange = useCallback((value: string) => {
-    if (hasQueryParams(value)) {
-      onUpdateAd(activeTab, { link: stripQueryParams(value) });
-    } else {
-      onUpdateAd(activeTab, { link: value });
-    }
-  }, [activeTab, onUpdateAd]);
 
   const handleUpdate = useCallback((data: Partial<AdFormData>) => {
     onUpdateAd(activeTab, data);
@@ -124,8 +101,6 @@ export function IndividualEditPanel({ form, onUpdateAd }: IndividualEditPanelPro
           showExtra={showExtra}
           onToggleExtra={setShowExtra}
           onUpdate={handleUpdate}
-          onLinkChange={handleLinkChange}
-          hasQueryParams={hasQueryParams}
         />
       </CardContent>
     </Card>

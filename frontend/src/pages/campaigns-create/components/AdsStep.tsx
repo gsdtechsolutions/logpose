@@ -88,7 +88,10 @@ export function AdsStep({ form, onUpdate, onAddAd, onUpdateAd, onRemoveAd, onUpd
         <BulkEditPanel form={form} onUpdateBulk={onUpdateBulk} />
       ) : (
         form.ads.length > 0 && (
-          <IndividualEditPanel form={form} onUpdateAd={onUpdateAd} />
+          <IndividualEditPanel
+            form={form}
+            onUpdateAd={onUpdateAd}
+          />
         )
       )}
 
@@ -109,6 +112,11 @@ export function AdsStep({ form, onUpdate, onAddAd, onUpdateAd, onRemoveAd, onUpd
                   index={index}
                   onUpdate={(data) => onUpdateAd(index, data)}
                   onRemove={() => onRemoveAd(index)}
+                  onReplaceMedia={(file) => onUpdateAd(index, {
+                    file,
+                    preview_url: URL.createObjectURL(file),
+                    media_type: file.type.startsWith("video/") ? "video" : "image",
+                  })}
                 />
               ))}
             </div>

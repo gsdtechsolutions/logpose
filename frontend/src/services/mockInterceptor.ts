@@ -488,9 +488,13 @@ export async function getMockData(endpoint: string, _options?: any): Promise<any
       success: true,
       campaign_id: "mock_camp_" + Date.now(),
       adset_id: "mock_adset_" + Date.now(),
-      campaigns_created: 1,
-      ads_created: 1,
+      campaigns_created: 2,
+      ads_created: 2,
       errors: [],
+      account_results: [
+        { account_id: 1, account_label: "Log Pose - Oficial", success: true, campaigns_created: 1, ads_created: 1, errors: [] },
+        { account_id: 2, account_label: "Log Pose - Secundária", success: true, campaigns_created: 1, ads_created: 1, errors: [] },
+      ],
     };
   }
 

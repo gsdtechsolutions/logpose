@@ -12,7 +12,7 @@ import { DateFilter, type DatePreset } from "@/components/DateFilter";
 
 export type FunnelViewMode = "conversion" | "recovery" | "compare";
 
-const POPULAR_STAGES = ["Cliques", "Alcance"];
+const POPULAR_STAGES = ["Cliques"];
 
 interface FunnelHeaderProps {
   products: { id: string; name: string }[];

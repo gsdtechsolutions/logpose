@@ -28,6 +28,7 @@ import { Toaster } from "@/components/ui/sonner";
 import { PageDataProvider } from "@/contexts/PageDataContext";
 import { AdvancedFeaturesProvider } from "@/contexts/AdvancedFeaturesContext";
 import { ValueDisplayProvider } from "@/contexts/ValueDisplayContext";
+import { MockModeBanner } from "@/components/MockModeBanner";
 
 export default function App() {
   return (
@@ -70,6 +71,7 @@ export default function App() {
       </TooltipProvider>
       <Toaster richColors position="top-right" />
       <AIChatProvider />
+      <MockModeBanner />
     </BrowserRouter>
     </ValueDisplayProvider>
     </AdvancedFeaturesProvider>

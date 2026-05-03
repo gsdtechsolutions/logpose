@@ -1,5 +1,6 @@
 import { RiMetaLine, RiAddCircleLine } from "@remixicon/react";
 import { Button } from "@/components/ui/button";
+import { FacebookAdsGuide } from "./FacebookAdsGuide";
 
 interface FacebookHeaderProps {
   onAddAccount: () => void;
@@ -19,10 +20,13 @@ export function FacebookHeader({ onAddAccount }: FacebookHeaderProps) {
           </p>
         </div>
       </div>
-      <Button onClick={onAddAccount} className="gap-1.5 h-9">
-        <RiAddCircleLine className="size-4" />
-        Adicionar Conta
-      </Button>
+      <div className="flex items-center gap-2">
+        <FacebookAdsGuide />
+        <Button onClick={onAddAccount} className="gap-1.5 h-9">
+          <RiAddCircleLine className="size-4" />
+          Adicionar Conta
+        </Button>
+      </div>
     </div>
   );
 }

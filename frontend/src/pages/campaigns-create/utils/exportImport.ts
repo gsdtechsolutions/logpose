@@ -9,6 +9,7 @@ import { getNextMidnightSP } from "./schedule";
 export function buildExportPayload(form: CampaignFormState): Record<string, unknown> {
   return {
     version: "1.0",
+    account_ids: form.accountIds,
     campaign_name: form.campaignName,
     campaign_count: form.campaignCount,
     daily_budget: form.dailyBudget,
@@ -138,9 +139,12 @@ export function applyDataToForm(
     });
   }
 
-  // Selecionar conta de anúncio se disponível
-  if (data.account_id) {
-    updateField("accountId", data.account_id as number);
+  // Selecionar contas de anúncio se disponível
+  if (Array.isArray(data.account_ids) && data.account_ids.length > 0) {
+    updateField("accountIds", data.account_ids as number[]);
+  } else if (data.account_id) {
+    // Retrocompatibilidade com exports antigos (single account)
+    updateField("accountIds", [data.account_id as number]);
   }
 }
 

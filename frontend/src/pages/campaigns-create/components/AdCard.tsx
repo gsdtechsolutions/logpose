@@ -1,4 +1,5 @@
-import { RiCloseLine, RiFilmLine, RiImageLine } from "@remixicon/react";
+import { useRef } from "react";
+import { RiCloseLine, RiFilmLine, RiImageLine, RiUploadCloud2Line } from "@remixicon/react";
 import type { AdFormData } from "../hooks/useCampaignForm";
 
 interface AdCardProps {
@@ -6,9 +7,24 @@ interface AdCardProps {
   index: number;
   onUpdate: (data: Partial<AdFormData>) => void;
   onRemove: () => void;
+  onReplaceMedia: (file: File) => void;
 }
 
-export function AdCard({ ad, index, onUpdate, onRemove }: AdCardProps) {
+export function AdCard({ ad, index, onUpdate, onRemove, onReplaceMedia }: AdCardProps) {
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const isVideo = file.type.startsWith("video/");
+    onReplaceMedia(file);
+    onUpdate({
+      file,
+      preview_url: URL.createObjectURL(file),
+      media_type: isVideo ? "video" : "image",
+    });
+    e.target.value = "";
+  };
   const isVideo = ad.media_type === "video";
 
   return (
@@ -38,13 +54,32 @@ export function AdCard({ ad, index, onUpdate, onRemove }: AdCardProps) {
           </span>
         </div>
 
-        {/* Botão remover */}
-        <button
-          onClick={onRemove}
-          className="absolute top-2 right-2 p-1 rounded-full bg-black/50 text-white opacity-0 group-hover:opacity-100 transition-opacity hover:bg-destructive"
-        >
-          <RiCloseLine className="size-4" />
-        </button>
+        {/* Ações no hover */}
+        <div className="absolute top-2 right-2 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+          <button
+            onClick={() => fileInputRef.current?.click()}
+            className="p-1 rounded-full bg-black/50 text-white hover:bg-primary transition-colors"
+            title="Alterar mídia"
+          >
+            <RiUploadCloud2Line className="size-4" />
+          </button>
+          <button
+            onClick={onRemove}
+            className="p-1 rounded-full bg-black/50 text-white hover:bg-destructive transition-colors"
+            title="Remover criativo"
+          >
+            <RiCloseLine className="size-4" />
+          </button>
+        </div>
+
+        {/* Input oculto para troca de mídia */}
+        <input
+          ref={fileInputRef}
+          type="file"
+          accept="image/*,video/*"
+          className="hidden"
+          onChange={handleFileChange}
+        />
       </div>
 
       {/* Nome do criativo */}

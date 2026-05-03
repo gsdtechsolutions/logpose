@@ -1,15 +1,14 @@
 import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import type { FacebookAccountAPI } from "@/services/integrations";
 import type { CampaignFormState } from "../hooks/useCampaignForm";
 import { DefineVideoModal } from "@/pages/campaigns/components/DefineVideoModal";
 import { DefineCheckoutModal } from "@/pages/campaigns/components/DefineCheckoutModal";
 import { DefineProductModal } from "@/pages/campaigns/components/DefineProductModal";
 import { SelectableField } from "./SelectableField";
+import { AccountMultiSelect } from "./AccountMultiSelect";
 import {
-  RiCheckLine,
   RiVideoLine,
   RiShoppingCart2Line,
   RiBox3Line,
@@ -17,15 +16,17 @@ import {
 
 interface AccountStepProps {
   accounts: FacebookAccountAPI[];
-  selectedAccountId: number | null;
-  onSelect: (accountId: number) => void;
+  selectedAccountIds: number[];
+  onToggleAccount: (accountId: number) => void;
+  onSelectAll: () => void;
+  onClearAll: () => void;
   onUpdate: <K extends keyof CampaignFormState>(key: K, value: CampaignFormState[K]) => void;
   form: CampaignFormState;
   isLoading: boolean;
 }
 
 export function AccountStep({
-  accounts, selectedAccountId, onSelect, onUpdate, form, isLoading,
+  accounts, selectedAccountIds, onToggleAccount, onSelectAll, onClearAll, onUpdate, form, isLoading,
 }: AccountStepProps) {
   const [videoModalOpen, setVideoModalOpen] = useState(false);
   const [checkoutModalOpen, setCheckoutModalOpen] = useState(false);
@@ -61,24 +62,15 @@ export function AccountStep({
           <CardTitle className="text-lg">Configuração Inicial</CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
-          <div className="space-y-2">
-            <Label>Conta Facebook Ads</Label>
-            <Select
-              value={selectedAccountId?.toString() ?? ""}
-              onValueChange={(val) => onSelect(Number(val))}
-            >
-              <SelectTrigger className="w-full">
-                <SelectValue placeholder="Selecione a conta de anúncio" />
-              </SelectTrigger>
-              <SelectContent>
-                {accounts.map((acc) => (
-                  <SelectItem key={acc.id} value={acc.id.toString()}>
-                    <span className="font-medium">{acc.label}</span>
-                    <span className="text-xs text-muted-foreground ml-2">({acc.account_id})</span>
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+          <div className="space-y-1.5">
+            <Label>Contas Facebook Ads</Label>
+            <AccountMultiSelect
+              accounts={accounts}
+              selectedIds={selectedAccountIds}
+              onToggle={onToggleAccount}
+              onSelectAll={onSelectAll}
+              onClearAll={onClearAll}
+            />
           </div>
 
           {/* Vídeo + Checkout */}
@@ -118,18 +110,6 @@ export function AccountStep({
               onClear={() => { onUpdate("productId", ""); onUpdate("productLabel", ""); }}
             />
           </div>
-
-          {selectedAccountId && (
-            <div className="p-3 rounded-lg bg-primary/5 border border-primary/10 flex items-center gap-2">
-              <RiCheckLine className="size-4 text-primary" />
-              <div>
-                <p className="text-sm text-primary font-medium">Conta selecionada</p>
-                <p className="text-xs text-muted-foreground">
-                  Todos os dados (pixels, páginas, interesses) serão buscados desta conta.
-                </p>
-              </div>
-            </div>
-          )}
         </CardContent>
       </Card>
 

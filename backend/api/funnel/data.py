@@ -43,12 +43,6 @@ async def get_funnel_data(
         upsell_stages = _get_upsell_stages(db, product.id, dt_start, dt_end)
 
         stages = [
-            _make_stage("Alcance", fb.get("impressions", 0), meta={
-                "impressions": fb.get("impressions", 0),
-                "ctr": fb.get("ctr", 0),
-                "cpm": fb.get("cpm", 0),
-                "spend": fb.get("spend", 0),
-            }),
             _make_stage("Cliques", fb.get("clicks", 0), meta={
                 "ctr": fb.get("ctr", 0),
                 "cpc": fb.get("cpc", 0),

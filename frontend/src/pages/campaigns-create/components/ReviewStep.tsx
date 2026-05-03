@@ -3,16 +3,18 @@ import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import type { CampaignFormState } from "../hooks/useCampaignForm";
+import type { FacebookAccountAPI } from "@/services/integrations";
 import { BID_STRATEGY_OPTIONS, CTA_OPTIONS, bidFieldLabel } from "../utils/defaults";
 import { formatScheduleDisplay } from "../utils/schedule";
-import { RiRocketLine, RiMegaphoneLine, RiFocus2Line, RiBrushLine } from "@remixicon/react";
+import { RiRocketLine, RiMegaphoneLine, RiFocus2Line, RiBrushLine, RiBankLine } from "@remixicon/react";
 
 interface ReviewStepProps {
   form: CampaignFormState;
   onUpdate: <K extends keyof CampaignFormState>(key: K, value: CampaignFormState[K]) => void;
+  accounts: FacebookAccountAPI[];
 }
 
-export function ReviewStep({ form, onUpdate }: ReviewStepProps) {
+export function ReviewStep({ form, onUpdate, accounts }: ReviewStepProps) {
   const strategyLabel =
     BID_STRATEGY_OPTIONS.find((o) => o.value === form.bidStrategy)?.label ?? form.bidStrategy;
   const genderLabel = form.gender === 1 ? "Masculino" : form.gender === 2 ? "Feminino" : "Todos";
@@ -21,6 +23,8 @@ export function ReviewStep({ form, onUpdate }: ReviewStepProps) {
     ? { ...form.bulkData }
     : firstAd ?? { cta_type: "", link: "", extra_params: "", primary_text: "", headline: "" };
   const ctaLabel = CTA_OPTIONS.find((o) => o.value === adData.cta_type)?.label ?? adData.cta_type;
+
+  const selectedAccounts = accounts.filter((a) => form.accountIds.includes(a.id));
 
   return (
     <div className="space-y-4">
@@ -35,9 +39,11 @@ export function ReviewStep({ form, onUpdate }: ReviewStepProps) {
                   Estrutura: {form.campaignCount}-{form.adsetCount}-{form.ads.length} — {form.campaignCount} campanha{form.campaignCount > 1 ? "s" : ""}, {form.adsetCount} conjunto{form.adsetCount > 1 ? "s" : ""} cada, {form.ads.length} anúncio{form.ads.length > 1 ? "s" : ""} cada
                 </p>
                 <p className="text-muted-foreground text-xs mt-0.5">
-                  {form.publishActive
-                    ? "Tudo será criado como ATIVO."
-                    : "Tudo será criado como PAUSADO. Ative quando estiver pronto."}
+                  {selectedAccounts.length > 1
+                    ? `Replicado em ${selectedAccounts.length} contas de anúncio.`
+                    : form.publishActive
+                      ? "Tudo será criado como ATIVO."
+                      : "Tudo será criado como PAUSADO. Ative quando estiver pronto."}
                 </p>
               </div>
             </div>
@@ -54,6 +60,9 @@ export function ReviewStep({ form, onUpdate }: ReviewStepProps) {
           </div>
         </CardContent>
       </Card>
+
+      {/* Contas selecionadas */}
+      <AccountsReviewCard accounts={selectedAccounts} />
 
       {/* Campanha */}
       <Card>
@@ -146,6 +155,37 @@ export function ReviewStep({ form, onUpdate }: ReviewStepProps) {
   );
 }
 
+// ─── Sub-components ──────────────────────────────────────────────────
+
+function AccountsReviewCard({ accounts }: { accounts: FacebookAccountAPI[] }) {
+  if (accounts.length === 0) return null;
+
+  return (
+    <Card>
+      <CardHeader className="pb-2">
+        <CardTitle className="text-sm flex items-center gap-1.5">
+          <RiBankLine className="size-4" /> Contas de Anúncio ({accounts.length})
+        </CardTitle>
+      </CardHeader>
+      <CardContent>
+        <div className="flex flex-wrap gap-2">
+          {accounts.map((acc) => (
+            <Badge key={acc.id} variant="secondary" className="text-xs gap-1">
+              {acc.label}
+              <span className="opacity-60 font-mono">({acc.account_id})</span>
+            </Badge>
+          ))}
+        </div>
+        {accounts.length > 1 && (
+          <p className="text-xs text-muted-foreground mt-2">
+            A mesma estrutura será criada em cada conta acima, sequencialmente.
+          </p>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
+
 function Row({ label, value }: { label: string; value: string }) {
   return (
     <div className="flex items-center gap-2 py-0.5">
@@ -155,7 +195,5 @@ function Row({ label, value }: { label: string; value: string }) {
   );
 }
 
-function truncate(str: string, max: number): string {
-  if (!str) return "—";
-  return str.length > max ? str.slice(0, max) + "..." : str;
-}
+const truncate = (str: string, max: number) =>
+  !str ? "—" : str.length > max ? str.slice(0, max) + "..." : str;

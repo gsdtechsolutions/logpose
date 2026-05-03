@@ -1,4 +1,4 @@
-import { RiPlayCircleLine, RiAddCircleLine } from "@remixicon/react";
+import { RiPlayLine, RiAddCircleLine } from "@remixicon/react";
 import { Button } from "@/components/ui/button";
 
 interface VturbHeaderProps {
@@ -9,8 +9,8 @@ export function VturbHeader({ onAddAccount }: VturbHeaderProps) {
   return (
     <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
       <div className="flex items-center gap-3">
-        <div className="rounded-lg bg-purple-500/10 p-2.5">
-          <RiPlayCircleLine className="size-5 text-purple-500" />
+        <div className="rounded-lg bg-red-500/10 p-2.5">
+          <RiPlayLine className="size-5 text-red-500" />
         </div>
         <div>
           <h1 className="text-2xl font-bold tracking-tight">VTurb</h1>

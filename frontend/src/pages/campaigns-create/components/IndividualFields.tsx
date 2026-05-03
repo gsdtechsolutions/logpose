@@ -5,18 +5,17 @@ import { Switch } from "@/components/ui/switch";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import type { AdFormData } from "../hooks/useCampaignForm";
 import { CTA_OPTIONS, DEFAULT_UTM_PARAMS } from "../utils/defaults";
+import { LinkInput } from "./LinkInput";
 
 interface IndividualFieldsProps {
   ad: AdFormData;
   showExtra: boolean;
   onToggleExtra: (v: boolean) => void;
   onUpdate: (data: Partial<AdFormData>) => void;
-  onLinkChange: (value: string) => void;
-  hasQueryParams: (url: string) => boolean;
 }
 
 export function IndividualFields({
-  ad, showExtra, onToggleExtra, onUpdate, onLinkChange, hasQueryParams,
+  ad, showExtra, onToggleExtra, onUpdate,
 }: IndividualFieldsProps) {
   return (
     <>
@@ -54,23 +53,10 @@ export function IndividualFields({
       </div>
 
       {/* Link de Destino */}
-      <div className="space-y-1.5">
-        <Label className="text-xs">Link de Destino</Label>
-        <Input
-          placeholder="https://suaoferta.com"
-          value={ad.link}
-          onChange={(e) => onLinkChange(e.target.value)}
-          autoComplete="off"
-        />
-        {hasQueryParams(ad.link) && (
-          <p className="text-xs text-orange-500">
-            Parâmetros removidos. Use "Parâmetros Adicionais" abaixo.
-          </p>
-        )}
-        <p className="text-[10px] text-muted-foreground">
-          Apenas a URL base. Parâmetros ?x=x devem ser adicionados em "Parâmetros Adicionais".
-        </p>
-      </div>
+      <LinkInput
+        value={ad.link}
+        onChange={(v) => onUpdate({ link: v })}
+      />
 
       {/* CTA */}
       <div className="space-y-1.5">

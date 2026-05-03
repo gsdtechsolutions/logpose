@@ -28,7 +28,8 @@ class TargetingPayload(BaseModel):
 
 class CampaignCreatePayload(BaseModel):
     """Payload completo para criar uma campanha."""
-    account_id: int  # ID interno do banco (FK facebook_accounts)
+    account_ids: list[int] = []  # IDs internos (FK facebook_accounts) - multi-account
+    account_id: int | None = None  # Retrocompatibilidade — single account
     # Campaign
     campaign_name: str
     daily_budget: float
@@ -47,6 +48,16 @@ class CampaignCreatePayload(BaseModel):
     batch_mode: bool = True
 
 
+class AccountResult(BaseModel):
+    """Resultado de criação para uma conta específica."""
+    account_id: int
+    account_label: str
+    success: bool
+    campaigns_created: int = 0
+    ads_created: int = 0
+    errors: list[str] = []
+
+
 class CampaignCreateResponse(BaseModel):
     """Resposta da criação de campanha."""
     success: bool
@@ -55,6 +66,7 @@ class CampaignCreateResponse(BaseModel):
     campaigns_created: int = 0
     ads_created: int = 0
     errors: list[str] = []
+    account_results: list[AccountResult] = []
 
 
 class CampaignExportData(BaseModel):

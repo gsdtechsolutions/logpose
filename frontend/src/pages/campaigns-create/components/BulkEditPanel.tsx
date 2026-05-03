@@ -7,42 +7,17 @@ import { Switch } from "@/components/ui/switch";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import type { CampaignFormState, BulkEditData } from "../hooks/useCampaignForm";
 import { CTA_OPTIONS, DEFAULT_UTM_PARAMS } from "../utils/defaults";
+import { LinkInput } from "./LinkInput";
 
 interface BulkEditPanelProps {
   form: CampaignFormState;
   onUpdateBulk: (data: Partial<BulkEditData>) => void;
 }
 
-/** Extrai URL base sem query params */
-function stripQueryParams(url: string): string {
-  try {
-    const parsed = new URL(url);
-    return `${parsed.origin}${parsed.pathname}`;
-  } catch {
-    // Se não for URL válida, remove tudo depois de ?
-    const idx = url.indexOf("?");
-    return idx >= 0 ? url.slice(0, idx) : url;
-  }
-}
-
-/** Verifica se URL contém query params */
-function hasQueryParams(url: string): boolean {
-  return url.includes("?");
-}
-
 export function BulkEditPanel({ form, onUpdateBulk }: BulkEditPanelProps) {
   const bulk = form.bulkData;
 
   const [showExtra, setShowExtra] = useState(!!bulk.extra_params);
-
-  const handleLinkChange = (value: string) => {
-    if (hasQueryParams(value)) {
-      // Bloqueia: remove os params automaticamente
-      onUpdateBulk({ link: stripQueryParams(value) });
-    } else {
-      onUpdateBulk({ link: value });
-    }
-  };
 
   return (
     <Card>
@@ -90,24 +65,11 @@ export function BulkEditPanel({ form, onUpdateBulk }: BulkEditPanelProps) {
           </div>
         </div>
 
-        {/* Link - bloqueia query params */}
-        <div className="space-y-1.5">
-          <Label className="text-xs">Link de Destino</Label>
-          <Input
-            placeholder="https://suaoferta.com"
-            value={bulk.link}
-            onChange={(e) => handleLinkChange(e.target.value)}
-            autoComplete="off"
-          />
-          {hasQueryParams(bulk.link) && (
-            <p className="text-xs text-orange-500">
-              Parâmetros removidos. Use "Parâmetros Adicionais" abaixo.
-            </p>
-          )}
-          <p className="text-[10px] text-muted-foreground">
-            Apenas a URL base. Parâmetros ?x=x devem ser adicionados em "Parâmetros Adicionais".
-          </p>
-        </div>
+        {/* Link de Destino */}
+        <LinkInput
+          value={bulk.link}
+          onChange={(v) => onUpdateBulk({ link: v })}
+        />
 
         {/* CTA — full width */}
         <div className="space-y-1.5">

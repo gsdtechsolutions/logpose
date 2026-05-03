@@ -28,6 +28,15 @@ export interface InterestData {
   audience_size: number;
 }
 
+export interface AccountResult {
+  account_id: number;
+  account_label: string;
+  success: boolean;
+  campaigns_created: number;
+  ads_created: number;
+  errors: string[];
+}
+
 export interface CampaignCreateResult {
   success: boolean;
   campaign_id?: string;
@@ -35,6 +44,7 @@ export interface CampaignCreateResult {
   campaigns_created?: number;
   ads_created: number;
   errors: string[];
+  account_results?: AccountResult[];
 }
 
 // ─── Fetch helpers ────────────────────────────────────────────────────
@@ -76,13 +86,22 @@ export async function publishCampaign(
   // Mock mode — intercept before hitting the real API
   if (sessionStorage.getItem("mock_mode") === "true") {
     await new Promise((r) => setTimeout(r, 800));
+    const accountIds = (payload.account_ids as number[]) || [];
     return {
       success: true,
       campaign_id: "mock_camp_" + Date.now(),
       adset_id: "mock_adset_" + Date.now(),
-      campaigns_created: (payload.campaign_count as number) || 1,
-      ads_created: Array.isArray(payload.ads) ? (payload.ads as unknown[]).length : 1,
+      campaigns_created: ((payload.campaign_count as number) || 1) * Math.max(accountIds.length, 1),
+      ads_created: Array.isArray(payload.ads) ? (payload.ads as unknown[]).length * Math.max(accountIds.length, 1) : 1,
       errors: [],
+      account_results: accountIds.map((id) => ({
+        account_id: id,
+        account_label: `Conta ${id}`,
+        success: true,
+        campaigns_created: (payload.campaign_count as number) || 1,
+        ads_created: Array.isArray(payload.ads) ? (payload.ads as unknown[]).length : 1,
+        errors: [],
+      })),
     };
   }
 

@@ -2,9 +2,9 @@ import logging
 from sqlalchemy.orm import Session
 
 from integrations.webhook.schemas import StandardizedWebhookEvent
+from integrations.webhook.auto_product import ensure_product_from_webhook
 from database.models.customer import Customer
 from database.models.transaction import Transaction, TransactionStatus
-from database.models.product import Product
 from database.models.customer_product import CustomerProduct
 from database.core.timezone import now_sp
 from integrations.webhook.recovery_helper import (
@@ -99,7 +99,8 @@ def process_webhook_event(db: Session, event: StandardizedWebhookEvent):
         if not customer.first_purchase_at:
             customer.first_purchase_at = customer.last_purchase_at
 
-    product = db.query(Product).filter(Product.name == event.product_name).first()
+    # Auto-criação de produto (se não existir, cria com checkout + alias)
+    product = ensure_product_from_webhook(db, event)
     product_id_to_save = product.id if product else None
     
     amount_to_save = event.amount

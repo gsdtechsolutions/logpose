@@ -1,12 +1,16 @@
 import { useState, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
+import {
+  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
+} from "@/components/ui/select";
 import { cn } from "@/lib/utils";
 import { PlatformLogo } from "@/components/PlatformLogo";
 import {
   RiUploadCloud2Line, RiFileExcelLine, RiLoader4Line,
 } from "@remixicon/react";
 import type { ImportPlatform } from "@/types/import";
+import type { WebhookEndpointAPI } from "@/services/integrations";
 
 interface Props {
   onSubmit: (
@@ -15,9 +19,15 @@ interface Props {
   ) => void;
   isLoading: boolean;
   error: string | null;
+  webhooks?: WebhookEndpointAPI[];
+  webhookSlug?: string;
+  onWebhookSlugChange?: (slug: string | undefined) => void;
 }
 
-export function ImportStepPlatform({ onSubmit, isLoading, error }: Props) {
+export function ImportStepPlatform({
+  onSubmit, isLoading, error,
+  webhooks = [], webhookSlug, onWebhookSlugChange,
+}: Props) {
   const [platform, setPlatform] = useState<ImportPlatform | null>(null);
   const [file, setFile] = useState<File | null>(null);
   const [fileVendas, setFileVendas] = useState<File | null>(null);
@@ -42,7 +52,7 @@ export function ImportStepPlatform({ onSubmit, isLoading, error }: Props) {
             <button
               key={p}
               type="button"
-              onClick={() => { setPlatform(p); setFile(null); setFileVendas(null); setFileOrigem(null); }}
+              onClick={() => { setPlatform(p); setFile(null); setFileVendas(null); setFileOrigem(null); onWebhookSlugChange?.(undefined); }}
               disabled={isLoading}
               className={cn(
                 "flex flex-col items-center gap-1 rounded-lg border-2 p-4 transition-all cursor-pointer",
@@ -60,6 +70,32 @@ export function ImportStepPlatform({ onSubmit, isLoading, error }: Props) {
           ))}
         </div>
       </div>
+
+      {/* Conta (opcional) */}
+      {platform && (() => {
+        const accounts = webhooks.filter((w) => w.platform === platform);
+        if (accounts.length === 0) return null;
+        return (
+          <div className="space-y-1.5">
+            <Label className="text-xs">Conta <span className="text-muted-foreground">(opcional)</span></Label>
+            <Select
+              value={webhookSlug ?? "__none__"}
+              onValueChange={(v) => onWebhookSlugChange?.(v === "__none__" ? undefined : v)}
+              disabled={isLoading}
+            >
+              <SelectTrigger className="h-9 text-sm">
+                <SelectValue placeholder="Nenhuma — importar sem conta" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="__none__">Nenhuma — importar sem conta</SelectItem>
+                {accounts.map((w) => (
+                  <SelectItem key={w.slug} value={w.slug}>{w.name}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+        );
+      })()}
 
       {/* Upload de arquivos */}
       {platform === "kiwify" && (

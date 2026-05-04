@@ -14,4 +14,5 @@ class FacebookAccount(Base):
     label = Column(String(255), nullable=False)
     account_id = Column(String(100), unique=True, nullable=False)
     access_token = Column(String(500), nullable=False)
+    business_id = Column(String(100), nullable=True)
     created_at = Column(DateTime, server_default=CREATED_AT_DEFAULT)

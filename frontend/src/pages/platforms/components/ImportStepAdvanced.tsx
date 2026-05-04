@@ -1,10 +1,9 @@
 import { useState, useEffect, useMemo } from "react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
-  RiArrowLeftLine, RiLoader4Line, RiScissorsCutLine, RiGroupLine,
+  RiArrowLeftLine, RiLoader4Line, RiGroupLine,
 } from "@remixicon/react";
 import type {
   ImportPreviewResponse, ProductConfig, SmartGroupConfig,
@@ -29,7 +28,7 @@ function extractGroupName(name: string, sep: string): string {
 }
 
 export function ImportStepAdvanced({ preview, onExecute, onBack, isLoading, error }: Props) {
-  const [sep, setSep] = useState("|");
+  const sep = "|";
   const [existingProducts, setExistingProducts] = useState<ProductAPI[]>([]);
   const [groups, setGroups] = useState<SmartGroupConfig[]>([]);
 
@@ -58,7 +57,7 @@ export function ImportStepAdvanced({ preview, onExecute, onBack, isLoading, erro
         };
       });
     });
-  }, [sep, preview.products]);
+  }, [preview.products]);
 
   // Todos os nomes de grupos são candidatos a pai (independente do tipo atual)
   const allGroupNames = useMemo(
@@ -124,36 +123,21 @@ export function ImportStepAdvanced({ preview, onExecute, onBack, isLoading, erro
 
   return (
     <div className="space-y-4">
-      {/* Separador */}
-      <div className="rounded-lg border border-dashed border-primary/40 bg-primary/5 p-3 space-y-2.5">
-        <div className="flex items-center gap-2">
-          <RiScissorsCutLine className="size-4 text-primary shrink-0" />
-          <p className="text-sm font-semibold">Separador de nome</p>
-        </div>
-        <p className="text-xs text-muted-foreground">
-          Produtos com mesmo prefixo serão agrupados em um único produto.
+      {/* Resumo de grupos */}
+      <div className="rounded-lg border border-dashed border-primary/40 bg-primary/5 p-3">
+        <p className="text-xs text-muted-foreground mb-2">
+          Produtos com mesmo prefixo (separados por <span className="font-mono bg-muted px-1 rounded">|</span>) são agrupados em um único produto.
           Ex: <span className="font-mono bg-muted px-1 rounded">Mentoria | Paola [127]</span> → <span className="font-mono bg-muted px-1 rounded">Mentoria</span>
         </p>
-        <div className="flex gap-2 items-center">
-          <div className="w-24">
-            <Input
-              value={sep}
-              onChange={(e) => setSep(e.target.value)}
-              placeholder="|"
-              className="h-8 text-center font-mono text-sm"
-              maxLength={5}
-            />
-          </div>
-          <Badge variant="secondary" className="gap-1">
-            <RiGroupLine className="size-3" />
-            {groups.length} grupo{groups.length !== 1 ? "s" : ""} detectado{groups.length !== 1 ? "s" : ""}
-            {groups.length !== preview.products.length && (
-              <span className="text-muted-foreground ml-1">
-                ({preview.products.length} produto{preview.products.length !== 1 ? "s" : ""} agrupado{preview.products.length !== 1 ? "s" : ""})
-              </span>
-            )}
-          </Badge>
-        </div>
+        <Badge variant="secondary" className="gap-1">
+          <RiGroupLine className="size-3" />
+          {groups.length} grupo{groups.length !== 1 ? "s" : ""} detectado{groups.length !== 1 ? "s" : ""}
+          {groups.length !== preview.products.length && (
+            <span className="text-muted-foreground ml-1">
+              ({preview.products.length} produto{preview.products.length !== 1 ? "s" : ""} agrupado{preview.products.length !== 1 ? "s" : ""})
+            </span>
+          )}
+        </Badge>
       </div>
 
       {/* Lista de grupos */}

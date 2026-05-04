@@ -7,6 +7,7 @@ from database.models.product import Product
 from database.models.product_items import Checkout, OrderBump, Upsell
 from database.models.transaction import Transaction, TransactionStatus
 from api.auth.deps import get_current_user
+from api.products.alias_helper import get_product_names_for_filter
 
 router = APIRouter(prefix="/products", tags=["product-stats"])
 
@@ -63,19 +64,25 @@ def _calc_checkout_stats(db: Session, product: Product, checkouts: list[Checkout
     pelo product_id da transaction e pelo checkout_url (URL ou code).
     """
     stats = []
+    names = get_product_names_for_filter(db, product.id)
+    if names:
+        product_filter = or_(Transaction.product_id == product.id, Transaction.product_name.in_(names))
+    else:
+        product_filter = Transaction.product_id == product.id
+
     for ck in checkouts:
         match_filter = _build_checkout_match_filter(ck)
 
         # Approved sales that match this product and checkout
         sales_q = db.query(func.count(Transaction.id), func.coalesce(func.sum(Transaction.amount), 0)).filter(
-            Transaction.product_id == product.id,
+            product_filter,
             Transaction.status == TransactionStatus.APPROVED,
             match_filter,
         ).first()
 
         # Pending/abandoned transactions for this checkout
         abandons_q = db.query(func.count(Transaction.id)).filter(
-            Transaction.product_id == product.id,
+            product_filter,
             Transaction.status == TransactionStatus.PENDING,
             match_filter,
         ).scalar()
@@ -108,16 +115,22 @@ def _calc_order_bump_stats(db: Session, product: Product, order_bumps: list[Orde
     if not order_bumps:
         return stats
 
+    names = get_product_names_for_filter(db, product.id)
+    if names:
+        product_filter = or_(Transaction.product_id == product.id, Transaction.product_name.in_(names))
+    else:
+        product_filter = Transaction.product_id == product.id
+
     # Get all approved transactions for this product that have order_bumps
     txns = db.query(Transaction).filter(
-        Transaction.product_id == product.id,
+        product_filter,
         Transaction.status == TransactionStatus.APPROVED,
         Transaction.order_bumps.isnot(None),
     ).all()
 
     # Total approved sales for this product (for conversion calc)
     total_sales = db.query(func.count(Transaction.id)).filter(
-        Transaction.product_id == product.id,
+        product_filter,
         Transaction.status == TransactionStatus.APPROVED,
     ).scalar() or 0
 

@@ -72,6 +72,10 @@ def parse_payt_webhook(payload: Dict[str, Any]) -> Optional[StandardizedWebhookE
         product = payload.get("product", {})
         customer = payload.get("customer", {})
         
+        # Preço real do produto (em centavos na PayT)
+        product_price_cents = product.get("price", 0)
+        product_price = float(product_price_cents) / 100.0 if product_price_cents else 0.0
+
         # Para Rastreamento: link.sources ou link.query_params ou origin.query_params
         link = payload.get("link", {})
         sources = link.get("sources", {})
@@ -98,6 +102,7 @@ def parse_payt_webhook(payload: Dict[str, Any]) -> Optional[StandardizedWebhookE
             payment_status=payment_status,
             product_external_id=product.get("code", ""),
             product_name=product.get("name", ""),
+            product_price=product_price,
             customer_external_id=customer.get("code", ""),
             customer_email=customer.get("email", ""),
             customer_name=customer.get("name", ""),

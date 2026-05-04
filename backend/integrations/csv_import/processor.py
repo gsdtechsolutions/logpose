@@ -16,6 +16,7 @@ def process_import(
     rows: list[ImportRow],
     products_config: list[ProductConfig],
     platform: str,
+    webhook_slug: str | None = None,
 ) -> ImportResultResponse:
     """Processa a importação: cria Products, Customers, Transactions."""
     platform_enum = PaymentPlatform(platform)
@@ -39,7 +40,7 @@ def process_import(
         _auto_create_payt_checkouts(db, rows, config_map, product_db)
 
     # Fase 3: Processar transações e clientes
-    process_transactions(db, rows, config_map, product_db, platform_enum, result)
+    process_transactions(db, rows, config_map, product_db, platform_enum, result, webhook_slug)
 
     db.commit()
     logger.info(

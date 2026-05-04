@@ -52,10 +52,12 @@ export async function executeImport(
   platform: ImportPlatform,
   files: { file?: File; fileVendas?: File; fileOrigem?: File },
   productsConfig: ProductConfig[],
+  webhookSlug?: string,
 ): Promise<ImportResultResponse> {
   const form = new FormData();
   form.append("platform", platform);
   form.append("products_config", JSON.stringify(productsConfig));
+  if (webhookSlug) form.append("webhook_slug", webhookSlug);
 
   if (platform === "kiwify" && files.file) {
     form.append("file", files.file);

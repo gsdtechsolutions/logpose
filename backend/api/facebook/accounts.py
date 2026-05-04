@@ -21,6 +21,7 @@ class FacebookAccountResponse(BaseModel):
     label: str
     account_id: str
     access_token: str
+    business_id: str | None = None
     created_at: datetime | None = None
 
     class Config:

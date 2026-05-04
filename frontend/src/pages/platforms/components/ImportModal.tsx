@@ -14,6 +14,7 @@ import type {
   ImportResultResponse, ProductConfig,
 } from "@/types/import";
 import { previewImport, executeImport } from "@/services/import";
+import { useWebhooks } from "@/hooks/useWebhooks";
 
 interface ImportModalProps {
   open: boolean;
@@ -21,8 +22,10 @@ interface ImportModalProps {
 }
 
 export function ImportModal({ open, onOpenChange }: ImportModalProps) {
+  const { endpoints } = useWebhooks();
   const [step, setStep] = useState<ImportStep>("platform");
   const [platform, setPlatform] = useState<ImportPlatform | null>(null);
+  const [webhookSlug, setWebhookSlug] = useState<string | undefined>(undefined);
   const [files, setFiles] = useState<{ file?: File; fileVendas?: File; fileOrigem?: File }>({});
   const [preview, setPreview] = useState<ImportPreviewResponse | null>(null);
   const [result, setResult] = useState<ImportResultResponse | null>(null);
@@ -33,6 +36,7 @@ export function ImportModal({ open, onOpenChange }: ImportModalProps) {
   const resetState = () => {
     setStep("platform");
     setPlatform(null);
+    setWebhookSlug(undefined);
     setFiles({});
     setPreview(null);
     setResult(null);
@@ -65,7 +69,7 @@ export function ImportModal({ open, onOpenChange }: ImportModalProps) {
     setIsLoading(true);
     setError(null);
     try {
-      const data = await executeImport(platform, files, configs);
+      const data = await executeImport(platform, files, configs, webhookSlug);
       setResult(data);
       setStep("result");
     } catch (e) {
@@ -89,7 +93,7 @@ export function ImportModal({ open, onOpenChange }: ImportModalProps) {
           <DialogDescription>
             {step === "platform" && "Selecione a plataforma e faça upload do relatório"}
             {step === "preview" && !advancedMode && "Revise os produtos detectados e configure seus tipos"}
-            {step === "preview" && advancedMode && "Defina um separador para agrupar variantes em um único produto"}
+            {step === "preview" && advancedMode && "Agrupe variantes pelo separador | e configure os tipos de produto"}
             {step === "result" && "Veja o resumo da importação realizada"}
           </DialogDescription>
         </DialogHeader>
@@ -99,6 +103,9 @@ export function ImportModal({ open, onOpenChange }: ImportModalProps) {
             onSubmit={handlePreview}
             isLoading={isLoading}
             error={error}
+            webhooks={endpoints}
+            webhookSlug={webhookSlug}
+            onWebhookSlugChange={setWebhookSlug}
           />
         )}
 

@@ -46,7 +46,7 @@ def _get_saopaulo_time() -> datetime:
 def process_transactions(
     db: Session, rows: list[ImportRow], config_map: dict,
     product_db: dict[str, Product], platform_enum: PaymentPlatform,
-    result: ImportResultResponse,
+    result: ImportResultResponse, webhook_slug: str | None = None,
 ):
     """Cria Customers e Transactions para cada linha do CSV/XLSX."""
     # Rastreia IDs já processados neste lote para evitar duplicatas no próprio arquivo
@@ -102,6 +102,7 @@ def process_transactions(
             utm_campaign=row.utm_campaign, utm_content=row.utm_content,
             utm_term=row.utm_term, src=row.src,
             checkout_url=row.checkout_code or row.checkout_name,
+            webhook_slug=webhook_slug,
             created_at=tx_date,
         )
         db.add(tx)

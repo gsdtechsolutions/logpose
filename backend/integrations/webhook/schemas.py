@@ -19,6 +19,7 @@ class StandardizedWebhookEvent(BaseModel):
     # Dados do produto
     product_external_id: str
     product_name: str
+    product_price: float = 0.0  # Preço do produto (diferente de amount/comissão)
     
     # Dados do cliente
     customer_external_id: Optional[str] = None

@@ -30,6 +30,7 @@ def parse_api_webhook(payload: Dict[str, Any]) -> Optional[StandardizedWebhookEv
             amount=float(payload.get("amount", 0.0)),
             product_external_id=str(payload.get("product_external_id", "")),
             product_name=str(payload.get("product_name", "")),
+            product_price=float(payload.get("product_price", 0.0)),
             customer_email=payload.get("customer_email", ""),
             customer_name=payload.get("customer_name"),
             customer_cpf=payload.get("customer_cpf"),

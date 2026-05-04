@@ -18,6 +18,7 @@ router = APIRouter(prefix="/import", tags=["import"])
 async def execute_import(
     platform: str = Form(...),
     products_config: str = Form(...),
+    webhook_slug: str | None = Form(None),
     file: UploadFile = File(None),
     file_vendas: UploadFile = File(None),
     file_origem: UploadFile = File(None),
@@ -59,7 +60,7 @@ async def execute_import(
 
     # Processar importação
     try:
-        result = process_import(db, rows, configs, platform)
+        result = process_import(db, rows, configs, platform, webhook_slug)
     except Exception as e:
         logger.error(f"Erro na importação: {e}", exc_info=True)
         db.rollback()

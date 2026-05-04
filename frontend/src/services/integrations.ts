@@ -31,6 +31,7 @@ export interface FacebookAccountAPI {
   label: string;
   account_id: string;
   access_token: string;
+  business_id: string | null;
   created_at: string | null;
 }
 
@@ -78,6 +79,22 @@ export async function discoverFacebookAccounts(
   businessId: string
 ): Promise<DiscoverResponse> {
   return apiRequest<DiscoverResponse>("/facebook/accounts/discover", {
+    method: "POST",
+    body: { access_token: accessToken, business_id: businessId },
+  });
+}
+
+export interface SyncResult {
+  added: number;
+  skipped: number;
+  total_found: number;
+}
+
+export async function syncFacebookAccounts(
+  accessToken: string,
+  businessId: string
+): Promise<SyncResult> {
+  return apiRequest<SyncResult>("/facebook/accounts/sync", {
     method: "POST",
     body: { access_token: accessToken, business_id: businessId },
   });

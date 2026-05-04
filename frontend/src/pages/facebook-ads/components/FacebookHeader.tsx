@@ -1,12 +1,14 @@
-import { RiMetaLine, RiAddCircleLine } from "@remixicon/react";
+import { RiMetaLine, RiAddCircleLine, RiRefreshLine } from "@remixicon/react";
 import { Button } from "@/components/ui/button";
 import { FacebookAdsGuide } from "./FacebookAdsGuide";
 
 interface FacebookHeaderProps {
   onAddAccount: () => void;
+  onSync: () => void;
+  hasAccounts: boolean;
 }
 
-export function FacebookHeader({ onAddAccount }: FacebookHeaderProps) {
+export function FacebookHeader({ onAddAccount, onSync, hasAccounts }: FacebookHeaderProps) {
   return (
     <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
       <div className="flex items-center gap-3">
@@ -22,6 +24,12 @@ export function FacebookHeader({ onAddAccount }: FacebookHeaderProps) {
       </div>
       <div className="flex items-center gap-2">
         <FacebookAdsGuide />
+        {hasAccounts && (
+          <Button variant="outline" onClick={onSync} className="gap-1.5 h-9">
+            <RiRefreshLine className="size-4" />
+            Sincronizar
+          </Button>
+        )}
         <Button onClick={onAddAccount} className="gap-1.5 h-9">
           <RiAddCircleLine className="size-4" />
           Adicionar Conta

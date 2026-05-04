@@ -1,14 +1,18 @@
 """
-Descobre todas as contas de anúncio vinculadas a um Business Manager (BM).
-Usa a Graph API da Meta para listar owned_ad_accounts.
+Descobre e sincroniza contas de anúncio de um Business Manager (BM).
+- discover: lista contas do BM (retorna pro frontend selecionar)
+- sync: busca contas do BM e faz upsert direto no DB
 """
 import os
 import logging
 import httpx
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
+from sqlalchemy.orm import Session
 
 from api.auth.deps import get_current_user
+from database.core.connection import get_db
+from database.models.facebook_account import FacebookAccount
 
 logger = logging.getLogger(__name__)
 
@@ -33,6 +37,12 @@ class DiscoverResponse(BaseModel):
     total: int
 
 
+class SyncResult(BaseModel):
+    added: int
+    skipped: int
+    total_found: int
+
+
 @router.post("/accounts/discover", response_model=DiscoverResponse)
 async def discover_accounts(
     payload: DiscoverRequest,
@@ -42,9 +52,58 @@ async def discover_accounts(
     Lista todas as contas de anúncio de um Business Manager.
     Faz paginação automática para BMs com muitas contas.
     """
-    url = f"{GRAPH_API_BASE}/{payload.business_id}/owned_ad_accounts"
+    accounts = await _fetch_bm_accounts(payload.access_token, payload.business_id)
+    return DiscoverResponse(accounts=accounts, total=len(accounts))
+
+
+@router.post("/accounts/sync", response_model=SyncResult)
+async def sync_accounts(
+    payload: DiscoverRequest,
+    db: Session = Depends(get_db),
+    _=Depends(get_current_user),
+):
+    """
+    Sincroniza contas do BM: busca todas e faz upsert no DB.
+    Reutiliza a mesma lógica de fetch do discover.
+    """
+    discovered = await _fetch_bm_accounts(payload.access_token, payload.business_id)
+
+    if not discovered:
+        raise HTTPException(status_code=400, detail="Nenhuma conta encontrada neste Business Manager")
+
+    added = 0
+    skipped = 0
+
+    for item in discovered:
+        existing = db.query(FacebookAccount).filter(
+            FacebookAccount.account_id == item.account_id,
+        ).first()
+
+        if existing:
+            if not existing.business_id:
+                existing.business_id = payload.business_id
+            skipped += 1
+            continue
+
+        db.add(FacebookAccount(
+            label=item.name,
+            account_id=item.account_id,
+            access_token=payload.access_token,
+            business_id=payload.business_id,
+        ))
+        added += 1
+
+    db.commit()
+    return SyncResult(added=added, skipped=skipped, total_found=len(discovered))
+
+
+async def _fetch_bm_accounts(
+    access_token: str, business_id: str,
+) -> list[DiscoveredAccount]:
+    """Busca todas as contas de anúncio do BM com paginação."""
+    url = f"{GRAPH_API_BASE}/{business_id}/owned_ad_accounts"
     params = {
-        "access_token": payload.access_token,
+        "access_token": access_token,
         "fields": "account_id,name",
         "limit": 100,
     }
@@ -57,18 +116,12 @@ async def discover_accounts(
 
             if response.status_code != 200:
                 error_data = response.json()
-                error_msg = (
-                    error_data.get("error", {}).get("message", "Erro desconhecido")
-                )
-                raise HTTPException(
-                    status_code=400,
-                    detail=f"Erro na API da Meta: {error_msg}",
-                )
+                error_msg = error_data.get("error", {}).get("message", "Erro desconhecido")
+                raise HTTPException(status_code=400, detail=f"Erro na API da Meta: {error_msg}")
 
             data = response.json()
             accounts.extend(_parse_accounts(data))
 
-            # Paginação automática
             while "paging" in data and "next" in data["paging"]:
                 response = await client.get(data["paging"]["next"])
                 if response.status_code != 200:
@@ -78,12 +131,9 @@ async def discover_accounts(
 
     except httpx.RequestError as e:
         logger.error(f"Erro ao conectar com a Meta API: {e}")
-        raise HTTPException(
-            status_code=502,
-            detail="Não foi possível conectar com a API da Meta",
-        )
+        raise HTTPException(status_code=502, detail="Não foi possível conectar com a API da Meta")
 
-    return DiscoverResponse(accounts=accounts, total=len(accounts))
+    return accounts
 
 
 def _parse_accounts(data: dict) -> list[DiscoveredAccount]:
@@ -93,7 +143,6 @@ def _parse_accounts(data: dict) -> list[DiscoveredAccount]:
         account_id = item.get("account_id", item.get("id", ""))
         name = item.get("name", account_id)
         if account_id:
-            # Garante que tenha o prefixo act_
             if not account_id.startswith("act_"):
                 account_id = f"act_{account_id}"
             result.append(DiscoveredAccount(account_id=account_id, name=name))

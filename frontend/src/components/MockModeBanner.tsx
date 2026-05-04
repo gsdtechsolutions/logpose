@@ -1,3 +1,4 @@
+import { createPortal } from "react-dom";
 import { RiTestTubeLine, RiCloseLine } from "@remixicon/react";
 import { useMockMode } from "@/hooks/useMockMode";
 
@@ -6,7 +7,7 @@ export function MockModeBanner() {
 
   if (!isMock) return null;
 
-  return (
+  return createPortal(
     <div
       className="mock-mode-banner"
       role="status"
@@ -26,6 +27,7 @@ export function MockModeBanner() {
         <RiCloseLine size={13} />
         <span>Desativar</span>
       </button>
-    </div>
+    </div>,
+    document.body
   );
 }

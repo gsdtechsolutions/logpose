@@ -1,18 +1,30 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { FacebookHeader } from "./components/FacebookHeader";
 import { FacebookTable } from "./components/FacebookTable";
 import { AddAccountModal } from "./components/AddAccountModal";
+import { SyncAccountsModal } from "./components/SyncAccountsModal";
 import { ConfirmDeleteModal } from "@/components/ConfirmDeleteModal";
 import { useFacebookAccounts } from "@/hooks/useFacebookAccounts";
 import type { FacebookAccountAPI } from "@/services/integrations";
 
 export default function FacebookAdsPage() {
-  const { accounts, isLoading, addAccount, bulkAddAccounts, removeAccount } = useFacebookAccounts();
+  const { accounts, isLoading, addAccount, bulkAddAccounts, removeAccount, syncAccounts } = useFacebookAccounts();
   const [modalOpen, setModalOpen] = useState(false);
+  const [syncOpen, setSyncOpen] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<FacebookAccountAPI | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
   const [isAdding, setIsAdding] = useState(false);
   const [prefillToken, setPrefillToken] = useState<string | undefined>();
+
+  // Detectar token e BM existentes para prefill no modal de sync
+  const syncDefaults = useMemo(() => {
+    const withBm = accounts.find((a) => a.business_id);
+    if (withBm) {
+      return { token: withBm.access_token, businessId: withBm.business_id ?? "" };
+    }
+    const first = accounts[0];
+    return first ? { token: first.access_token, businessId: "" } : { token: "", businessId: "" };
+  }, [accounts]);
 
   const openAddModal = () => {
     setPrefillToken(undefined);
@@ -70,7 +82,11 @@ export default function FacebookAdsPage() {
 
   return (
     <div className="flex flex-col gap-6 p-6">
-      <FacebookHeader onAddAccount={openAddModal} />
+      <FacebookHeader
+        onAddAccount={openAddModal}
+        onSync={() => setSyncOpen(true)}
+        hasAccounts={accounts.length > 0}
+      />
       <FacebookTable
         accounts={accounts}
         isLoading={isLoading}
@@ -84,6 +100,13 @@ export default function FacebookAdsPage() {
         onBulkAdd={handleBulkAdd}
         isLoading={isAdding}
         prefillToken={prefillToken}
+      />
+      <SyncAccountsModal
+        open={syncOpen}
+        onOpenChange={setSyncOpen}
+        onSync={syncAccounts}
+        prefillToken={syncDefaults.token}
+        prefillBusinessId={syncDefaults.businessId}
       />
       <ConfirmDeleteModal
         open={!!deleteTarget}

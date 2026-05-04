@@ -4,7 +4,9 @@ import {
   createFacebookAccount,
   deleteFacebookAccount,
   bulkCreateFacebookAccounts,
+  syncFacebookAccounts,
   type FacebookAccountAPI,
+  type SyncResult,
 } from "@/services/integrations";
 import { invalidateCacheByPrefix } from "@/lib/queryCache";
 
@@ -37,6 +39,16 @@ export function useFacebookAccounts() {
     await reload();
   };
 
+  const syncAccounts = async (
+    accessToken: string,
+    businessId: string,
+  ): Promise<SyncResult> => {
+    const result = await syncFacebookAccounts(accessToken, businessId);
+    invalidateCacheByPrefix("facebook-accounts");
+    await reload();
+    return result;
+  };
+
   return {
     accounts: data ?? [],
     isLoading,
@@ -44,6 +56,7 @@ export function useFacebookAccounts() {
     addAccount,
     bulkAddAccounts,
     removeAccount,
+    syncAccounts,
     reload,
   };
 }

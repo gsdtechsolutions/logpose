@@ -72,6 +72,11 @@ def parse_kiwify_webhook(payload: Dict[str, Any]) -> Optional[StandardizedWebhoo
         if not isinstance(tracking, dict):
             tracking = {}
 
+        # Preço real do produto (em centavos, dentro de Commissions.product_base_price)
+        commissions = payload.get("Commissions", {})
+        product_price_cents = commissions.get("product_base_price", 0)
+        product_price = float(product_price_cents) / 100.0 if product_price_cents else 0.0
+
         return StandardizedWebhookEvent(
             external_id=payload.get("order_id", ""),
             platform=PaymentPlatform.KIWIFY,
@@ -82,6 +87,7 @@ def parse_kiwify_webhook(payload: Dict[str, Any]) -> Optional[StandardizedWebhoo
             payment_status=order_status,
             product_external_id=product_info.get("product_id", ""),
             product_name=product_info.get("product_name", ""),
+            product_price=product_price,
             customer_email=customer_info.get("email", ""),
             customer_name=customer_info.get("full_name", ""),
             customer_cpf=customer_info.get("CPF", ""),

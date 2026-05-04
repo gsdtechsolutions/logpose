@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import {
   Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogFooter,
 } from "@/components/ui/dialog";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
@@ -23,6 +24,7 @@ export function AddGeminiModal({ open, onOpenChange, onAdd, isLoading }: AddGemi
   const [modelSearch, setModelSearch] = useState("");
   const [loadingModels, setLoadingModels] = useState(false);
   const [showModels, setShowModels] = useState(false);
+  const [popoverWidth, setPopoverWidth] = useState<number | undefined>(undefined);
 
   // Ao digitar a API key, busca modelos
   useEffect(() => {
@@ -101,49 +103,53 @@ export function AddGeminiModal({ open, onOpenChange, onAdd, isLoading }: AddGemi
           </div>
           <div className="space-y-2">
             <Label>Modelo</Label>
-            <div className="relative">
-              <Button
-                type="button"
-                variant="outline"
-                className="w-full justify-between font-mono text-xs"
-                onClick={() => setShowModels(!showModels)}
-                disabled={loadingModels || models.length === 0}
+            <Popover open={showModels} onOpenChange={setShowModels}>
+              <PopoverTrigger asChild>
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="w-full justify-between font-mono text-xs"
+                  disabled={loadingModels || models.length === 0}
+                  ref={(el) => { if (el) setPopoverWidth(el.offsetWidth); }}
+                >
+                  {loadingModels ? "Carregando modelos..." : model}
+                  <RiSearchLine className="size-3.5 ml-2 opacity-50" />
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent
+                className="p-0"
+                style={{ width: popoverWidth }}
+                onOpenAutoFocus={(e) => e.preventDefault()}
               >
-                {loadingModels ? "Carregando modelos..." : model}
-                <RiSearchLine className="size-3.5 ml-2 opacity-50" />
-              </Button>
-              {showModels && models.length > 0 && (
-                <div className="absolute z-50 mt-1 w-full rounded-md border bg-popover shadow-lg max-h-48 overflow-auto">
-                  <div className="p-2">
-                    <Input
-                      placeholder="Buscar modelo..."
-                      value={modelSearch}
-                      onChange={(e) => setModelSearch(e.target.value)}
-                      className="h-8 text-xs"
-                      autoComplete="off"
-                    />
-                  </div>
-                  <div className="px-1 pb-1">
-                    {filteredModels.map((m) => (
-                      <button
-                        key={m.id}
-                        type="button"
-                        className="w-full text-left px-2 py-1.5 rounded text-xs hover:bg-accent flex items-center justify-between"
-                        onClick={() => { setModel(m.id); setShowModels(false); setModelSearch(""); }}
-                      >
-                        <span className="font-mono">{m.id}</span>
-                        {m.id === model && <RiCheckLine className="size-3.5 text-primary" />}
-                      </button>
-                    ))}
-                    {filteredModels.length === 0 && (
-                      <p className="text-xs text-muted-foreground px-2 py-2">
-                        Nenhum modelo encontrado
-                      </p>
-                    )}
-                  </div>
+                <div className="p-2">
+                  <Input
+                    placeholder="Buscar modelo..."
+                    value={modelSearch}
+                    onChange={(e) => setModelSearch(e.target.value)}
+                    className="h-8 text-xs"
+                    autoComplete="off"
+                  />
                 </div>
-              )}
-            </div>
+                <div className="px-1 pb-1 max-h-48 overflow-auto">
+                  {filteredModels.map((m) => (
+                    <button
+                      key={m.id}
+                      type="button"
+                      className="w-full text-left px-2 py-1.5 rounded text-xs hover:bg-accent flex items-center justify-between"
+                      onClick={() => { setModel(m.id); setShowModels(false); setModelSearch(""); }}
+                    >
+                      <span className="font-mono">{m.id}</span>
+                      {m.id === model && <RiCheckLine className="size-3.5 text-primary" />}
+                    </button>
+                  ))}
+                  {filteredModels.length === 0 && (
+                    <p className="text-xs text-muted-foreground px-2 py-2">
+                      Nenhum modelo encontrado
+                    </p>
+                  )}
+                </div>
+              </PopoverContent>
+            </Popover>
           </div>
           <div className="rounded-lg bg-muted/50 p-3">
             <p className="text-[10px] font-medium uppercase tracking-wider text-muted-foreground mb-1">

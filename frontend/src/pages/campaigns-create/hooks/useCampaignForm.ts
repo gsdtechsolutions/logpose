@@ -111,7 +111,14 @@ export function useCampaignForm() {
 
   const updateField = useCallback(
     <K extends keyof CampaignFormState>(key: K, value: CampaignFormState[K]) => {
-      setForm((prev) => ({ ...prev, [key]: value }));
+      setForm((prev) => {
+        const next = { ...prev, [key]: value };
+        if (key === "bidStrategy") {
+          next.bidAmount = null;
+          next.roasFloor = null;
+        }
+        return next;
+      });
     },
     []
   );

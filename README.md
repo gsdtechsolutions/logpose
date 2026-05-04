@@ -37,7 +37,7 @@ Em poucos segundos, um CEO consegue visualizar a saúde financeira da operação
 
 A maneira mais rápida e segura de colocar o **Log Pose** no ar. Essa opção configura automaticamente seu banco de dados, gera os certificados de segurança (SSL) e roteia o seu domínio personalizado em poucos segundos, colocando o app em ambiente de produção sem dor de cabeça.
 
-[![Deploy to Ilumin](https://cdn.ilumin.app/static/banner-git.webp)](https://ilumin.app/?repo=SEU_REPOSITORIO_AQUI)
+[![Deploy to Ilumin](https://cdn.ilumin.app/static/banner-git.webp)](https://ilumin.app/?src=logpose)
 
 > **Por que recomendamos o Deploy Automático?**
 > A infraestrutura em nuvem lida com a parte pesada (proxy reverso, criação de redes isoladas e renovação de certificados). Você foca apenas em usar o aplicativo e escalar o seu negócio.
@@ -48,7 +48,7 @@ A maneira mais rápida e segura de colocar o **Log Pose** no ar. Essa opção co
 
 Preparamos um guia passo a passo em vídeo. Mostramos o aplicativo por dentro e como você pode ter a sua própria estrutura rodando em menos de 5 minutos.
 
-[![Assista ao Tutorial](https://img.youtube.com/vi/ID_DO_VIDEO_AQUI/maxresdefault.jpg)](https://youtu.be/ID_DO_VIDEO_AQUI)
+[![Assista ao Tutorial](https://img.youtube.com/vi/18X6f_i844U/maxresdefault.jpg)](https://youtu.be/18X6f_i844U)
 
 ---
 

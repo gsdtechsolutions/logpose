@@ -1,5 +1,4 @@
 import { useState, useCallback, type KeyboardEvent } from "react";
-import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { RiCloseLine, RiAddCircleLine } from "@remixicon/react";
@@ -11,17 +10,28 @@ interface AccountIdBadgesProps {
   disabled?: boolean;
 }
 
+/** Strips "act_" prefix if present and returns only the numeric part */
+function stripActPrefix(value: string): string {
+  return value.replace(/^act_/i, "").trim();
+}
+
+/** Ensures the final ID always has "act_" prefix */
+function ensureActPrefix(value: string): string {
+  const raw = stripActPrefix(value);
+  return raw ? `act_${raw}` : "";
+}
+
 export function AccountIdBadges({ accountIds, onChange, disabled }: AccountIdBadgesProps) {
   const [inputValue, setInputValue] = useState("");
 
   const addId = useCallback(() => {
-    const val = inputValue.trim();
-    if (!val) return;
-    if (accountIds.includes(val)) {
+    const fullId = ensureActPrefix(inputValue);
+    if (!fullId || fullId === "act_") return;
+    if (accountIds.includes(fullId)) {
       setInputValue("");
       return;
     }
-    onChange([...accountIds, val]);
+    onChange([...accountIds, fullId]);
     setInputValue("");
   }, [inputValue, accountIds, onChange]);
 
@@ -34,6 +44,12 @@ export function AccountIdBadges({ accountIds, onChange, disabled }: AccountIdBad
       e.preventDefault();
       addId();
     }
+  };
+
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    // Strip "act_" if user pastes the full ID — we already show the prefix visually
+    const raw = stripActPrefix(e.target.value);
+    setInputValue(raw);
   };
 
   return (
@@ -70,14 +86,20 @@ export function AccountIdBadges({ accountIds, onChange, disabled }: AccountIdBad
       )}
 
       <div className="flex gap-2">
-        <Input
-          placeholder="act_XXXXXXXXXX"
-          value={inputValue}
-          onChange={(e) => setInputValue(e.target.value)}
-          onKeyDown={handleKeyDown}
-          disabled={disabled}
-          className="font-mono"
-        />
+        <div className="flex flex-1 items-center rounded-md border border-input bg-background ring-offset-background focus-within:ring-2 focus-within:ring-ring focus-within:ring-offset-2">
+          <span className="pl-3 text-sm font-mono text-muted-foreground select-none">
+            act_
+          </span>
+          <input
+            placeholder="XXXXXXXXXX"
+            value={inputValue}
+            onChange={handleInputChange}
+            onKeyDown={handleKeyDown}
+            disabled={disabled}
+            className="flex-1 bg-transparent py-2 pr-3 pl-0 text-sm font-mono outline-none placeholder:text-muted-foreground disabled:cursor-not-allowed disabled:opacity-50"
+            autoComplete="off"
+          />
+        </div>
         <Button
           type="button"
           variant="outline"

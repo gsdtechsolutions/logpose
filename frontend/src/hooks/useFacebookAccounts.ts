@@ -16,8 +16,8 @@ export function useFacebookAccounts() {
     queryFn: fetchFacebookAccounts,
   });
 
-  const addAccount = async (label: string, accountId: string, accessToken: string) => {
-    const newAccount = await createFacebookAccount(label, accountId, accessToken);
+  const addAccount = async (label: string, accountId: string, accessToken: string, businessId?: string) => {
+    const newAccount = await createFacebookAccount(label, accountId, accessToken, businessId);
     invalidateCacheByPrefix("facebook-accounts");
     await reload();
     return newAccount;
@@ -26,8 +26,9 @@ export function useFacebookAccounts() {
   const bulkAddAccounts = async (
     items: { label: string; account_id: string }[],
     accessToken: string,
+    businessId?: string,
   ) => {
-    const created = await bulkCreateFacebookAccounts(items, accessToken);
+    const created = await bulkCreateFacebookAccounts(items, accessToken, businessId);
     invalidateCacheByPrefix("facebook-accounts");
     await reload();
     return created;
@@ -35,6 +36,12 @@ export function useFacebookAccounts() {
 
   const removeAccount = async (id: number) => {
     await deleteFacebookAccount(id);
+    invalidateCacheByPrefix("facebook-accounts");
+    await reload();
+  };
+
+  const removeAccounts = async (ids: number[]) => {
+    await Promise.all(ids.map((id) => deleteFacebookAccount(id)));
     invalidateCacheByPrefix("facebook-accounts");
     await reload();
   };
@@ -56,6 +63,7 @@ export function useFacebookAccounts() {
     addAccount,
     bulkAddAccounts,
     removeAccount,
+    removeAccounts,
     syncAccounts,
     reload,
   };

@@ -9,12 +9,14 @@ import { discoverFacebookAccounts, type DiscoveredAccount } from "@/services/int
 interface AutoImportToggleProps {
   accessToken: string;
   onAccountsDiscovered: (accounts: DiscoveredAccount[]) => void;
+  onBusinessIdDiscovered?: (businessId: string) => void;
   disabled?: boolean;
 }
 
 export function AutoImportToggle({
   accessToken,
   onAccountsDiscovered,
+  onBusinessIdDiscovered,
   disabled,
 }: AutoImportToggleProps) {
   const [autoMode, setAutoMode] = useState(false);
@@ -52,6 +54,7 @@ export function AutoImportToggle({
 
       setFoundCount(result.total);
       onAccountsDiscovered(result.accounts);
+      onBusinessIdDiscovered?.(businessId.trim());
     } catch (e) {
       setError(
         e instanceof Error ? e.message : "Erro ao buscar contas do BM"

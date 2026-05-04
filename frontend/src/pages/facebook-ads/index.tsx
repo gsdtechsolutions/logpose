@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState } from "react";
 import { FacebookHeader } from "./components/FacebookHeader";
 import { FacebookTable } from "./components/FacebookTable";
 import { AddAccountModal } from "./components/AddAccountModal";
@@ -8,23 +8,14 @@ import { useFacebookAccounts } from "@/hooks/useFacebookAccounts";
 import type { FacebookAccountAPI } from "@/services/integrations";
 
 export default function FacebookAdsPage() {
-  const { accounts, isLoading, addAccount, bulkAddAccounts, removeAccount, syncAccounts } = useFacebookAccounts();
+  const { accounts, isLoading, addAccount, bulkAddAccounts, removeAccount, removeAccounts, syncAccounts } = useFacebookAccounts();
   const [modalOpen, setModalOpen] = useState(false);
   const [syncOpen, setSyncOpen] = useState(false);
-  const [deleteTarget, setDeleteTarget] = useState<FacebookAccountAPI | null>(null);
+  const [syncTarget, setSyncTarget] = useState<{ token: string; businessId: string }>({ token: "", businessId: "" });
+  const [deleteTargets, setDeleteTargets] = useState<FacebookAccountAPI[]>([]);
   const [isDeleting, setIsDeleting] = useState(false);
   const [isAdding, setIsAdding] = useState(false);
   const [prefillToken, setPrefillToken] = useState<string | undefined>();
-
-  // Detectar token e BM existentes para prefill no modal de sync
-  const syncDefaults = useMemo(() => {
-    const withBm = accounts.find((a) => a.business_id);
-    if (withBm) {
-      return { token: withBm.access_token, businessId: withBm.business_id ?? "" };
-    }
-    const first = accounts[0];
-    return first ? { token: first.access_token, businessId: "" } : { token: "", businessId: "" };
-  }, [accounts]);
 
   const openAddModal = () => {
     setPrefillToken(undefined);
@@ -36,10 +27,10 @@ export default function FacebookAdsPage() {
     setModalOpen(true);
   };
 
-  const handleAdd = async (label: string, accountId: string, accessToken: string) => {
+  const handleAdd = async (label: string, accountId: string, accessToken: string, businessId?: string) => {
     try {
       setIsAdding(true);
-      await addAccount(label, accountId, accessToken);
+      await addAccount(label, accountId, accessToken, businessId);
       setModalOpen(false);
     } catch {
       alert("Erro ao adicionar conta Facebook");
@@ -50,11 +41,12 @@ export default function FacebookAdsPage() {
 
   const handleBulkAdd = async (
     items: { label: string; account_id: string }[],
-    accessToken: string
+    accessToken: string,
+    businessId?: string
   ) => {
     try {
       setIsAdding(true);
-      await bulkAddAccounts(items, accessToken);
+      await bulkAddAccounts(items, accessToken, businessId);
       setModalOpen(false);
     } catch {
       alert("Erro ao adicionar contas Facebook");
@@ -64,34 +56,50 @@ export default function FacebookAdsPage() {
   };
 
   const handleDeleteClick = (account: FacebookAccountAPI) => {
-    setDeleteTarget(account);
+    setDeleteTargets([account]);
+  };
+
+  const handleDeleteGroupClick = (group: FacebookAccountAPI[]) => {
+    setDeleteTargets(group);
   };
 
   const handleConfirmDelete = async () => {
-    if (!deleteTarget) return;
+    if (!deleteTargets.length) return;
     try {
       setIsDeleting(true);
-      await removeAccount(deleteTarget.id);
-      setDeleteTarget(null);
+      if (deleteTargets.length === 1) {
+        await removeAccount(deleteTargets[0].id);
+      } else {
+        await removeAccounts(deleteTargets.map((a) => a.id));
+      }
+      setDeleteTargets([]);
     } catch {
-      alert("Erro ao excluir conta Facebook");
+      alert("Erro ao excluir conta(s) Facebook");
     } finally {
       setIsDeleting(false);
     }
   };
 
+  const handleSyncGroup = (token: string, businessId: string | null) => {
+    setSyncTarget({ token, businessId: businessId ?? "" });
+    setSyncOpen(true);
+  };
+
+  const deleteLabel = deleteTargets[0]?.label ?? "";
+  const deleteDescription = deleteTargets.length > 1
+    ? `Tem certeza que deseja excluir as ${deleteTargets.length} contas de "${deleteLabel}"? Esta ação não pode ser desfeita.`
+    : `Tem certeza que deseja excluir a conta "${deleteLabel}"? Esta ação não pode ser desfeita.`;
+
   return (
     <div className="flex flex-col gap-6 p-6">
-      <FacebookHeader
-        onAddAccount={openAddModal}
-        onSync={() => setSyncOpen(true)}
-        hasAccounts={accounts.length > 0}
-      />
+      <FacebookHeader onAddAccount={openAddModal} />
       <FacebookTable
         accounts={accounts}
         isLoading={isLoading}
         onDelete={handleDeleteClick}
+        onDeleteGroup={handleDeleteGroupClick}
         onDuplicate={openDuplicateModal}
+        onSync={handleSyncGroup}
       />
       <AddAccountModal
         open={modalOpen}
@@ -105,16 +113,16 @@ export default function FacebookAdsPage() {
         open={syncOpen}
         onOpenChange={setSyncOpen}
         onSync={syncAccounts}
-        prefillToken={syncDefaults.token}
-        prefillBusinessId={syncDefaults.businessId}
+        prefillToken={syncTarget.token}
+        prefillBusinessId={syncTarget.businessId}
       />
       <ConfirmDeleteModal
-        open={!!deleteTarget}
-        onOpenChange={(open) => !open && setDeleteTarget(null)}
+        open={deleteTargets.length > 0}
+        onOpenChange={(open) => !open && setDeleteTargets([])}
         onConfirm={handleConfirmDelete}
         isLoading={isDeleting}
         title="Excluir conta Facebook"
-        description={`Tem certeza que deseja excluir a conta "${deleteTarget?.label}"? Esta ação não pode ser desfeita.`}
+        description={deleteDescription}
       />
     </div>
   );

@@ -12,8 +12,8 @@ import type { DiscoveredAccount } from "@/services/integrations";
 export interface AddAccountModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onAdd: (label: string, accountId: string, accessToken: string) => void;
-  onBulkAdd?: (items: { label: string; account_id: string }[], accessToken: string) => void;
+  onAdd: (label: string, accountId: string, accessToken: string, businessId?: string) => void;
+  onBulkAdd?: (items: { label: string; account_id: string }[], accessToken: string, businessId?: string) => void;
   isLoading?: boolean;
   prefillToken?: string;
 }
@@ -22,12 +22,12 @@ export function AddAccountModal({
   open, onOpenChange, onAdd, onBulkAdd, isLoading, prefillToken,
 }: AddAccountModalProps) {
   const [label, setLabel] = useState("");
+  const [businessId, setBusinessId] = useState("");
   const [accountIds, setAccountIds] = useState<string[]>([]);
   const [accessToken, setAccessToken] = useState("");
 
   const isDuplicate = !!prefillToken;
 
-  // Pre-fill token when duplicating
   useEffect(() => {
     if (open && prefillToken) {
       setAccessToken(prefillToken);
@@ -37,26 +37,27 @@ export function AddAccountModal({
   const handleSubmit = useCallback((e: React.FormEvent) => {
     e.preventDefault();
     if (!accessToken.trim()) return;
-
     if (accountIds.length === 0) return;
 
-    // Build items with auto-label if only 1, or indexed labels
+    const bmId = businessId.trim() || undefined;
+
     if (accountIds.length === 1) {
       const finalLabel = label.trim() || accountIds[0];
-      onAdd(finalLabel, accountIds[0], accessToken.trim());
+      onAdd(finalLabel, accountIds[0], accessToken.trim(), bmId);
     } else if (onBulkAdd) {
-      const items = accountIds.map((id, idx) => ({
-        label: label.trim() ? `${label.trim()} (${idx + 1})` : id,
+      const items = accountIds.map((id) => ({
+        label: label.trim() || id,
         account_id: id,
       }));
-      onBulkAdd(items, accessToken.trim());
+      onBulkAdd(items, accessToken.trim(), bmId);
     }
 
     resetFields();
-  }, [accessToken, accountIds, label, onAdd, onBulkAdd]);
+  }, [accessToken, accountIds, businessId, label, onAdd, onBulkAdd]);
 
   const resetFields = () => {
     setLabel("");
+    setBusinessId("");
     setAccountIds([]);
     setAccessToken("");
   };
@@ -90,9 +91,7 @@ export function AddAccountModal({
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="space-y-2">
-            <Label htmlFor="fb-label">
-              Nome de Identificação {accountIds.length > 1 && <span className="text-muted-foreground text-xs">(será numerado automaticamente)</span>}
-            </Label>
+            <Label htmlFor="fb-label">Nome de Identificação</Label>
             <Input
               id="fb-label"
               placeholder="Ex: Conta Principal"
@@ -115,10 +114,10 @@ export function AddAccountModal({
               autoComplete="off"
             />
           </div>
-
           <AutoImportToggle
             accessToken={accessToken}
             onAccountsDiscovered={handleAccountsDiscovered}
+            onBusinessIdDiscovered={(id) => setBusinessId(id)}
             disabled={isLoading}
           />
 

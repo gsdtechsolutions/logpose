@@ -42,11 +42,12 @@ export async function fetchFacebookAccounts(): Promise<FacebookAccountAPI[]> {
 export async function createFacebookAccount(
   label: string,
   accountId: string,
-  accessToken: string
+  accessToken: string,
+  businessId?: string
 ): Promise<FacebookAccountAPI> {
   return apiRequest<FacebookAccountAPI>("/facebook/accounts", {
     method: "POST",
-    body: { label, account_id: accountId, access_token: accessToken },
+    body: { label, account_id: accountId, access_token: accessToken, business_id: businessId || null },
   });
 }
 
@@ -56,11 +57,12 @@ export async function deleteFacebookAccount(id: number): Promise<void> {
 
 export async function bulkCreateFacebookAccounts(
   accounts: { label: string; account_id: string }[],
-  accessToken: string
+  accessToken: string,
+  businessId?: string
 ): Promise<FacebookAccountAPI[]> {
   return apiRequest<FacebookAccountAPI[]>("/facebook/accounts/bulk", {
     method: "POST",
-    body: { accounts, access_token: accessToken },
+    body: { accounts, access_token: accessToken, business_id: businessId || null },
   });
 }
 

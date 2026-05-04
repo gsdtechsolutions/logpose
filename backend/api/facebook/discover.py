@@ -100,34 +100,46 @@ async def sync_accounts(
 async def _fetch_bm_accounts(
     access_token: str, business_id: str,
 ) -> list[DiscoveredAccount]:
-    """Busca todas as contas de anúncio do BM com paginação."""
-    url = f"{GRAPH_API_BASE}/{business_id}/owned_ad_accounts"
-    params = {
-        "access_token": access_token,
-        "fields": "account_id,name",
-        "limit": 100,
-    }
-
+    """Busca todas as contas de anúncio do BM (owned + shared) com paginação."""
+    edges = ["owned_ad_accounts", "client_ad_accounts"]
+    seen_ids: set[str] = set()
     accounts: list[DiscoveredAccount] = []
 
     try:
         async with httpx.AsyncClient(timeout=30.0) as client:
-            response = await client.get(url, params=params)
+            for edge in edges:
+                url = f"{GRAPH_API_BASE}/{business_id}/{edge}"
+                params = {
+                    "access_token": access_token,
+                    "fields": "account_id,name",
+                    "limit": 100,
+                }
 
-            if response.status_code != 200:
-                error_data = response.json()
-                error_msg = error_data.get("error", {}).get("message", "Erro desconhecido")
-                raise HTTPException(status_code=400, detail=f"Erro na API da Meta: {error_msg}")
+                response = await client.get(url, params=params)
 
-            data = response.json()
-            accounts.extend(_parse_accounts(data))
-
-            while "paging" in data and "next" in data["paging"]:
-                response = await client.get(data["paging"]["next"])
                 if response.status_code != 200:
-                    break
+                    if edge == "owned_ad_accounts":
+                        error_data = response.json()
+                        error_msg = error_data.get("error", {}).get("message", "Erro desconhecido")
+                        raise HTTPException(status_code=400, detail=f"Erro na API da Meta: {error_msg}")
+                    logger.warning(f"Falha ao buscar {edge}, ignorando: {response.status_code}")
+                    continue
+
                 data = response.json()
-                accounts.extend(_parse_accounts(data))
+                for acc in _parse_accounts(data):
+                    if acc.account_id not in seen_ids:
+                        seen_ids.add(acc.account_id)
+                        accounts.append(acc)
+
+                while "paging" in data and "next" in data["paging"]:
+                    response = await client.get(data["paging"]["next"])
+                    if response.status_code != 200:
+                        break
+                    data = response.json()
+                    for acc in _parse_accounts(data):
+                        if acc.account_id not in seen_ids:
+                            seen_ids.add(acc.account_id)
+                            accounts.append(acc)
 
     except httpx.RequestError as e:
         logger.error(f"Erro ao conectar com a Meta API: {e}")

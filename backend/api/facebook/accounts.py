@@ -14,6 +14,7 @@ class FacebookAccountCreate(BaseModel):
     label: str
     account_id: str
     access_token: str
+    business_id: str | None = None
 
 
 class FacebookAccountResponse(BaseModel):
@@ -55,6 +56,7 @@ def create_account(
         label=payload.label,
         account_id=payload.account_id,
         access_token=payload.access_token,
+        business_id=payload.business_id,
     )
     db.add(account)
     db.commit()
@@ -65,6 +67,7 @@ def create_account(
 class FacebookBulkCreate(BaseModel):
     accounts: list[dict]  # [{"label": "...", "account_id": "..."}]
     access_token: str
+    business_id: str | None = None
 
 
 @router.post("/accounts/bulk", response_model=list[FacebookAccountResponse], status_code=201)
@@ -88,6 +91,7 @@ def create_accounts_bulk(
             label=label,
             account_id=account_id,
             access_token=payload.access_token,
+            business_id=payload.business_id,
         )
         db.add(account)
         db.flush()

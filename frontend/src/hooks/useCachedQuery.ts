@@ -4,7 +4,6 @@ import {
   getCache,
   setCache,
   invalidateCache,
-  isCacheStale,
 } from "@/lib/queryCache";
 
 interface UseCachedQueryOptions<T> {
@@ -16,8 +15,6 @@ interface UseCachedQueryOptions<T> {
   queryFn: () => Promise<T>;
   /** If true, skip fetching (useful for conditional queries). */
   enabled?: boolean;
-  /** Stale TTL in ms. If cache is older than this on mount, refetch in bg. Default: 120s. */
-  staleTtlMs?: number;
   /** If set, automatically refetch silently every N ms. */
   autoRefreshMs?: number;
 }
@@ -49,7 +46,7 @@ const inflightRequests = new Map<string, Promise<unknown>>();
 export function useCachedQuery<T>(
   options: UseCachedQueryOptions<T>,
 ): UseCachedQueryResult<T> {
-  const { cachePrefix, params, queryFn, enabled = true, staleTtlMs = 120_000, autoRefreshMs } = options;
+  const { cachePrefix, params, queryFn, enabled = true, autoRefreshMs } = options;
 
   // Estabiliza params por valor (JSON) para evitar re-renders com objetos novos
   const paramsStr = params ? JSON.stringify(params) : "";
@@ -130,14 +127,23 @@ export function useCachedQuery<T>(
     [cachePrefix, paramsStr, enabled],
   );
 
-  // Auto-fetch on mount or when params change.
-  // If cache hit but stale (> staleTtlMs), refetch in background
-  // keeping the existing data visible while the fresh data loads.
+  // SWR (Stale-While-Revalidate): on mount or param change,
+  // serve cached data instantly (no loading) and ALWAYS revalidate
+  // in background so the UI is immediately responsive but never stale.
   useEffect(() => {
+    if (!enabled) return;
     const key = buildCacheKey(cachePrefix, stableParams);
-    if (enabled && isCacheStale(key, staleTtlMs)) {
+    const hit = getCache<T>(key);
+    if (hit) {
+      // Serve cache instantly
+      setData(hit);
+      setIsLoading(false);
+      setError(null);
+      // Always revalidate silently in background
+      silentRef.current = true;
       fetchData(true);
     } else {
+      // No cache yet → normal fetch with loading state
       fetchData();
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps

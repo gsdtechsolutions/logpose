@@ -1,18 +1,18 @@
 """
 Busca anúncios (ads) + insights da conta Meta Ads.
+Usa nested fields para obter estrutura e métricas em 1 único request.
 """
-import asyncio
-
 from integrations.meta_ads.client import MetaAdsClient
 from integrations.meta_ads.schemas import AdInsights
 from integrations.meta_ads.helpers import (
     extract_action_value, safe_float, safe_int, calc_connect_rate,
 )
 
-AD_FIELDS = ",".join([
-    "ad_id",
-    "ad_name",
-    "adset_id",
+# Campos de estrutura do ad
+STRUCTURE_FIELDS = "id,name,status,adset_id"
+
+# Campos de métricas (insights)
+INSIGHT_FIELDS = ",".join([
     "spend",
     "impressions",
     "inline_link_clicks",
@@ -21,7 +21,12 @@ AD_FIELDS = ",".join([
     "actions",
 ])
 
-AD_STRUCTURE_FIELDS = "id,name,status,adset_id"
+
+def _build_fields(date_start: str, date_end: str) -> str:
+    """Monta fields com insights aninhados (1 request ao invés de 2)."""
+    time_range = f'{{"since":"{date_start}","until":"{date_end}"}}'
+    insights = f"insights.time_range({time_range}){{{INSIGHT_FIELDS}}}"
+    return f"{STRUCTURE_FIELDS},{insights}"
 
 
 async def fetch_ads(
@@ -30,48 +35,29 @@ async def fetch_ads(
     date_end: str,
 ) -> list[AdInsights]:
     """
-    Busca todos os ads da conta com insights no período.
-    Usa asyncio.gather para buscar estrutura e insights em paralelo.
+    Busca todos os ads da conta com insights inline.
+    1 único request com nested fields (estrutura + métricas juntos).
     """
-    # Buscar estrutura + insights em paralelo
-    ads_raw, insights_raw = await asyncio.gather(
-        client._get_all_pages(
-            f"{client.account_id}/ads",
-            params={"fields": AD_STRUCTURE_FIELDS, "limit": "200"},
-        ),
-        client._get_all_pages(
-            f"{client.account_id}/insights",
-            params={
-                "fields": AD_FIELDS,
-                "level": "ad",
-                "time_range": f'{{"since":"{date_start}","until":"{date_end}"}}',
-            },
-        ),
-    )
+    fields = _build_fields(date_start, date_end)
 
-    insights_map = {
-        row.get("ad_id"): row for row in insights_raw
-    }
+    ads_raw = await client._get_all_pages(
+        f"{client.account_id}/ads",
+        params={"fields": fields, "limit": "200"},
+    )
 
     results: list[AdInsights] = []
     for ad in ads_raw:
-        ad_id = ad.get("id", "")
-        insight = insights_map.get(ad_id, {})
+        insight = _extract_insight(ad)
         actions = insight.get("actions", [])
 
-        lpv = safe_int(extract_action_value(
-            actions, "landing_page_view",
-        ))
-        initiate = safe_int(extract_action_value(
-            actions, "omni_initiated_checkout",
-        ))
-        # Cliques no link (não "clicks all")
+        lpv = safe_int(extract_action_value(actions, "landing_page_view"))
+        initiate = safe_int(extract_action_value(actions, "omni_initiated_checkout"))
         clicks = safe_int(insight.get("inline_link_clicks", 0))
         ctr = safe_float(insight.get("inline_link_click_ctr", 0))
         cpc = safe_float(insight.get("cost_per_unique_inline_link_click", 0))
 
         results.append(AdInsights(
-            id=ad_id,
+            id=ad.get("id", ""),
             ad_set_id=ad.get("adset_id", ""),
             name=ad.get("name", ""),
             status=_normalize_status(ad.get("status", "")),
@@ -88,6 +74,12 @@ async def fetch_ads(
         ))
 
     return results
+
+
+def _extract_insight(entity: dict) -> dict:
+    """Extrai o primeiro registro de insights aninhados."""
+    data = entity.get("insights", {}).get("data", [])
+    return data[0] if data else {}
 
 
 def _normalize_status(raw_status: str) -> str:

@@ -88,6 +88,7 @@ export interface CampaignData {
 export interface CampaignsResponse {
   campaigns: CampaignData[];
   unidentified: CampaignData;
+  error?: string | null;
 }
 
 export interface PresetAPI {

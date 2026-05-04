@@ -30,9 +30,10 @@ def query_kpis(days_back: int = 30) -> str:
 
         base = db.query(Transaction).filter(Transaction.created_at >= date_start)
 
-        # Buscar Meta Ads summary
         meta_summary = None
-        account = db.query(FacebookAccount).first()
+        account = db.query(FacebookAccount).filter(
+            FacebookAccount.token_valid.is_(True)
+        ).first()
         if account:
             service = MetaAdsService(account.access_token, account.account_id)
             loop = asyncio.new_event_loop()

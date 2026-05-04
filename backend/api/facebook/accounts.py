@@ -23,6 +23,7 @@ class FacebookAccountResponse(BaseModel):
     account_id: str
     access_token: str
     business_id: str | None = None
+    token_valid: bool = True
     created_at: datetime | None = None
 
     class Config:
@@ -57,6 +58,7 @@ def create_account(
         account_id=payload.account_id,
         access_token=payload.access_token,
         business_id=payload.business_id,
+        token_valid=True,
     )
     db.add(account)
     db.commit()
@@ -92,6 +94,7 @@ def create_accounts_bulk(
             account_id=account_id,
             access_token=payload.access_token,
             business_id=payload.business_id,
+            token_valid=True,
         )
         db.add(account)
         db.flush()
@@ -99,6 +102,28 @@ def create_accounts_bulk(
 
     db.commit()
     return created
+
+
+class FacebookTokenUpdate(BaseModel):
+    access_token: str
+
+
+@router.patch("/accounts/{account_id}/token", response_model=FacebookAccountResponse)
+def update_account_token(
+    account_id: int,
+    payload: FacebookTokenUpdate,
+    db: Session = Depends(get_db),
+    _=Depends(get_current_user),
+):
+    """Atualiza o token de uma conta e restaura token_valid=True."""
+    account = db.query(FacebookAccount).filter(FacebookAccount.id == account_id).first()
+    if not account:
+        raise HTTPException(status_code=404, detail="Conta Facebook não encontrada")
+    account.access_token = payload.access_token
+    account.token_valid = True
+    db.commit()
+    db.refresh(account)
+    return account
 
 
 @router.delete("/accounts/{account_id}", status_code=204)

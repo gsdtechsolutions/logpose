@@ -33,9 +33,12 @@ async def execute_ai_action(
     _=Depends(get_current_user),
 ):
     """Executa uma ação sugerida pela AI."""
-    fb_account = db.query(FacebookAccount).first()
+    fb_account = db.query(FacebookAccount).filter(
+        FacebookAccount.token_valid.is_(True)
+    ).first()
     if not fb_account:
-        raise HTTPException(status_code=404, detail="Nenhuma conta Facebook configurada")
+        raise HTTPException(status_code=404, detail="Nenhuma conta Facebook configurada ou token inválido")
+
 
     action = payload.action
     result_msg = ""

@@ -32,6 +32,7 @@ export function useCampaigns(dateStart: string, dateEnd: string) {
   const { data, isLoading, error, reload, silentReload } = useCachedQuery<{
     campaigns: CampaignData[];
     unidentified: CampaignData | null;
+    error?: string | null;
   }>({
     cachePrefix: "campaigns",
     params: { dateStart, dateEnd, activeAccountId },
@@ -144,6 +145,7 @@ export function useCampaigns(dateStart: string, dateEnd: string) {
   return {
     campaigns,
     unidentified: data?.unidentified ?? null,
+    metaError: data?.error ?? null,
     isLoading: isInitialLoading,
     error,
     accounts,

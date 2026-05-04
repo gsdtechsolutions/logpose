@@ -1,4 +1,4 @@
-import { useState, useMemo, useCallback } from "react";
+import { useState, useMemo, useCallback, useEffect } from "react";
 import { CampaignsHeader } from "./components/CampaignsHeader";
 import { CampaignsTable } from "./components/CampaignsTable";
 import { BottleneckTabs } from "./components/BottleneckTabs";
@@ -30,6 +30,8 @@ import type { ValueFilter } from "@/components/ValueFiltersSection";
 import { useCampaignPageData } from "@/hooks/useCampaignPageData";
 import { useKpiColors } from "@/hooks/useKpiColors";
 import { invalidateCacheByPrefix } from "@/lib/queryCache";
+import { useNavigate } from "react-router-dom";
+import { toast } from "sonner";
 
 const DEFAULT_PRESET_IDS = defaultPresets.map((p) => p.id);
 
@@ -62,10 +64,26 @@ export default function CampaignsPage() {
   const [dateEnd, setDateEnd] = useState(defaultDR.end);
 
   const {
-    campaigns, unidentified, isLoading, error,
+    campaigns, unidentified, metaError, isLoading, error,
     accounts: fbAccounts, activeAccountId, setSelectedAccountId,
     toggle, changeBudget, silentReload,
   } = useCampaigns(dateStart, dateEnd);
+
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    if (metaError === "token_invalid") {
+      toast.error("Token do Facebook Ads inválido", {
+        description: "O token de acesso expirou ou o app foi deletado. Atualize o token na página de integrações.",
+        duration: Infinity,
+        action: {
+          label: "Corrigir agora",
+          onClick: () => navigate("/facebook-ads"),
+        },
+        id: "meta-token-invalid",
+      });
+    }
+  }, [metaError, navigate]);
 
   useCampaignPrefetch(activeAccountId);
 

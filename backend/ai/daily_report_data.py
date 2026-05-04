@@ -59,7 +59,9 @@ def _calc_period_kpis(db: Session, start, end, ds: str, de: str) -> dict:
     )
 
     meta_summary = None
-    account = db.query(FacebookAccount).first()
+    account = db.query(FacebookAccount).filter(
+        FacebookAccount.token_valid.is_(True)
+    ).first()
     if account:
         try:
             meta_summary = _run_meta(
@@ -73,7 +75,9 @@ def _calc_period_kpis(db: Session, start, end, ds: str, de: str) -> dict:
 
 def _fetch_campaigns_today(db: Session, ds: str, de: str) -> str:
     """Busca campanhas do Meta Ads com métricas de hoje."""
-    account = db.query(FacebookAccount).first()
+    account = db.query(FacebookAccount).filter(
+        FacebookAccount.token_valid.is_(True)
+    ).first()
     if not account:
         return "Sem conta Facebook Ads configurada."
 

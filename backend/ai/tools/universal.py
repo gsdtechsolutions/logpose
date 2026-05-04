@@ -18,8 +18,10 @@ from api.campaigns.helpers import (
 
 
 def _get_fb_credentials(db):
-    """Obtém credenciais da primeira conta Facebook configurada."""
-    account = db.query(FacebookAccount).first()
+    """Obtém credenciais da primeira conta Facebook com token válido."""
+    account = db.query(FacebookAccount).filter(
+        FacebookAccount.token_valid.is_(True)
+    ).first()
     if not account:
         return None, None
     return account.access_token, account.account_id

@@ -54,4 +54,5 @@ export interface DashboardOverview {
   platform_distribution: PlatformDist[];
   top_campaigns: TopCampaign[];
   hourly_sales: HourlySale[];
+  meta_error?: string | null;
 }

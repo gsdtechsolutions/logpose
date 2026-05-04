@@ -7,7 +7,7 @@ from typing import Optional
 from sqlalchemy.orm import Session
 
 from database.models.facebook_account import FacebookAccount
-from integrations.meta_ads.client import MetaAdsClient
+from integrations.meta_ads.client import MetaAdsClient, MetaAuthError
 from integrations.meta_ads.helpers import safe_float, safe_int
 
 logger = logging.getLogger(__name__)
@@ -27,7 +27,9 @@ async def fetch_monthly_spend(
     Busca spend mensal da Meta Ads para o ano inteiro.
     Retorna dict: { month_num: { spend, clicks, impressions } }
     """
-    fb = db.query(FacebookAccount).first()
+    fb = db.query(FacebookAccount).filter(
+        FacebookAccount.token_valid.is_(True)
+    ).first()
     if not fb:
         return {}
 

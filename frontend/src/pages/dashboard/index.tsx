@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { DashboardHeader } from "./components/DashboardHeader";
 import { KpiGrid } from "./components/KpiGrid";
 import { RevenueChart } from "./components/RevenueChart";
@@ -9,14 +10,30 @@ import { GlobalFilterBar } from "@/components/layout/GlobalFilterBar";
 import { useDashboard } from "@/hooks/use-dashboard";
 import { fetchCustomersFilterOptions } from "@/services/customers";
 import { Skeleton } from "@/components/ui/skeleton";
+import { toast } from "sonner";
 import type { UpsellOption } from "@/types/sale";
 
 export default function DashboardPage() {
   const { data, settings, loading, filters, setFilters, reload } = useDashboard();
+  const navigate = useNavigate();
   const [products, setProducts] = useState<{ id: number; name: string }[]>([]);
   const [upsells, setUpsells] = useState<UpsellOption[]>([]);
   const [platforms, setPlatforms] = useState<{ value: string; label: string }[]>([]);
   const [accounts, setAccounts] = useState<{ slug: string; name: string; platform: string }[]>([]);
+
+  useEffect(() => {
+    if (data?.meta_error === "token_invalid") {
+      toast.error("Token do Facebook Ads inválido", {
+        description: "O token de acesso expirou ou o app foi deletado. Atualize o token na página de integrações.",
+        duration: Infinity,
+        action: {
+          label: "Corrigir agora",
+          onClick: () => navigate("/facebook-ads"),
+        },
+        id: "meta-token-invalid",
+      });
+    }
+  }, [data?.meta_error, navigate]);
 
   useEffect(() => {
     fetchCustomersFilterOptions().then((opt) => {

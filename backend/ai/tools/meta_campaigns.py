@@ -12,8 +12,10 @@ from datetime import timedelta
 
 
 def _get_meta_service(db):
-    """Obtém a primeira conta do Facebook configurada."""
-    account = db.query(FacebookAccount).first()
+    """Obtém a primeira conta do Facebook válida."""
+    account = db.query(FacebookAccount).filter(
+        FacebookAccount.token_valid.is_(True)
+    ).first()
     if not account:
         return None
     return MetaAdsService(account.access_token, account.account_id)

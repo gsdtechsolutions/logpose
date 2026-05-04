@@ -1,18 +1,18 @@
 """
 Busca campanhas + insights da conta Meta Ads.
+Usa nested fields para obter estrutura e métricas em 1 único request.
 """
-import asyncio
-
 from integrations.meta_ads.client import MetaAdsClient
 from integrations.meta_ads.schemas import CampaignInsights
 from integrations.meta_ads.helpers import (
     extract_action_value, safe_float, safe_int, calc_connect_rate,
 )
 
-# Campos que queremos das campanhas (estrutura + insights inline)
-CAMPAIGN_FIELDS = ",".join([
-    "campaign_id",
-    "campaign_name",
+# Campos de estrutura da campanha
+STRUCTURE_FIELDS = "id,name,status,daily_budget,lifetime_budget,objective,bid_strategy"
+
+# Campos de métricas (insights)
+INSIGHT_FIELDS = ",".join([
     "spend",
     "impressions",
     "inline_link_clicks",
@@ -21,8 +21,12 @@ CAMPAIGN_FIELDS = ",".join([
     "actions",
 ])
 
-# Campos de estrutura da campanha
-CAMPAIGN_STRUCTURE_FIELDS = "id,name,status,daily_budget,lifetime_budget,objective,bid_strategy"
+
+def _build_fields(date_start: str, date_end: str) -> str:
+    """Monta fields com insights aninhados (1 request ao invés de 2)."""
+    time_range = f'{{"since":"{date_start}","until":"{date_end}"}}'
+    insights = f"insights.time_range({time_range}){{{INSIGHT_FIELDS}}}"
+    return f"{STRUCTURE_FIELDS},{insights}"
 
 
 async def fetch_campaigns(
@@ -31,47 +35,25 @@ async def fetch_campaigns(
     date_end: str,
 ) -> list[CampaignInsights]:
     """
-    Busca todas as campanhas da conta com insights no período.
-    Usa asyncio.gather para buscar estrutura e insights em paralelo.
+    Busca todas as campanhas da conta com insights inline.
+    1 único request com nested fields (estrutura + métricas juntos).
     """
-    # Buscar estrutura + insights em paralelo
-    campaigns_raw, insights_raw = await asyncio.gather(
-        client._get_all_pages(
-            f"{client.account_id}/campaigns",
-            params={"fields": CAMPAIGN_STRUCTURE_FIELDS, "limit": "200"},
-        ),
-        client._get_all_pages(
-            f"{client.account_id}/insights",
-            params={
-                "fields": CAMPAIGN_FIELDS,
-                "level": "campaign",
-                "time_range": f'{{"since":"{date_start}","until":"{date_end}"}}',
-            },
-        ),
+    fields = _build_fields(date_start, date_end)
+
+    campaigns_raw = await client._get_all_pages(
+        f"{client.account_id}/campaigns",
+        params={"fields": fields, "limit": "200"},
     )
 
-    # Indexar insights por campaign_id
-    insights_map = {
-        row.get("campaign_id"): row for row in insights_raw
-    }
-
-    # 3. Combinar
     results: list[CampaignInsights] = []
     for camp in campaigns_raw:
-        camp_id = camp.get("id", "")
-        insight = insights_map.get(camp_id, {})
+        insight = _extract_insight(camp)
         actions = insight.get("actions", [])
 
-        lpv = safe_int(extract_action_value(
-            actions, "landing_page_view"
-        ))
-        initiate = safe_int(extract_action_value(
-            actions, "omni_initiated_checkout"
-        ))
-        # Cliques no link (não "clicks all")
+        lpv = safe_int(extract_action_value(actions, "landing_page_view"))
+        initiate = safe_int(extract_action_value(actions, "omni_initiated_checkout"))
         clicks = safe_int(insight.get("inline_link_clicks", 0))
         spend = safe_float(insight.get("spend", 0))
-        # CTR e CPC baseados em cliques no link
         ctr = safe_float(insight.get("inline_link_click_ctr", 0))
         cpc = safe_float(insight.get("cost_per_unique_inline_link_click", 0))
 
@@ -81,7 +63,7 @@ async def fetch_campaigns(
         ) / 100  # Meta retorna em centavos
 
         results.append(CampaignInsights(
-            id=camp_id,
+            id=camp.get("id", ""),
             name=camp.get("name", ""),
             status=_normalize_status(camp.get("status", "")),
             objective=_normalize_objective(camp.get("objective", "")),
@@ -92,13 +74,19 @@ async def fetch_campaigns(
             impressions=safe_int(insight.get("impressions", 0)),
             cpc=cpc,
             ctr=ctr,
-            cpa=0.0,  # Calculado depois com dados de transação
+            cpa=0.0,
             landing_page_views=lpv,
             initiate_checkout=initiate,
             connect_rate=calc_connect_rate(lpv, clicks),
         ))
 
     return results
+
+
+def _extract_insight(entity: dict) -> dict:
+    """Extrai o primeiro registro de insights aninhados."""
+    data = entity.get("insights", {}).get("data", [])
+    return data[0] if data else {}
 
 
 def _normalize_status(raw_status: str) -> str:

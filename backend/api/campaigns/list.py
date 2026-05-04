@@ -15,6 +15,7 @@ from api.campaigns.helpers import (
 )
 from api.campaigns.merge import merge_campaigns, merge_ads
 from integrations.meta_ads.service import MetaAdsService
+from integrations.meta_ads.client import MetaAuthError
 from integrations.vturb.plays_by_utm import fetch_vturb_stats_by_campaign
 
 router = APIRouter(prefix="/campaigns", tags=["campaigns"])
@@ -45,11 +46,20 @@ async def get_campaigns_data(
         meta_campaigns, meta_adsets, meta_ads = await service.get_all_levels(
             date_start, date_end,
         )
+    except MetaAuthError:
+        # Token inválido: marcar no banco para suprimir futuras chamadas
+        fb_account.token_valid = False
+        db.commit()
+        await service.close()
+        return {
+            "campaigns": [],
+            "unidentified": _build_unidentified(db, date_start, date_end),
+            "error": "token_invalid",
+        }
     except Exception as e:
         import logging
         logging.getLogger(__name__).error(f"Erro ao buscar dados do Meta Ads: {e}")
         await service.close()
-        # Retornar vazio com unidentified para não crashar o frontend
         return {
             "campaigns": [],
             "unidentified": _build_unidentified(db, date_start, date_end),
@@ -90,10 +100,15 @@ async def get_campaigns_data(
 
 
 def _get_fb_account(db: Session, account_id: Optional[int]) -> Optional[FacebookAccount]:
-    """Retorna a conta FB selecionada ou a primeira disponível."""
+    """Retorna a conta FB selecionada ou a primeira com token válido."""
     if account_id:
-        return db.query(FacebookAccount).filter(FacebookAccount.id == account_id).first()
-    return db.query(FacebookAccount).first()
+        return db.query(FacebookAccount).filter(
+            FacebookAccount.id == account_id,
+            FacebookAccount.token_valid.is_(True),
+        ).first()
+    return db.query(FacebookAccount).filter(
+        FacebookAccount.token_valid.is_(True)
+    ).first()
 
 
 def _get_fb_transactions(db: Session, date_start: str, date_end: str) -> list[Transaction]:

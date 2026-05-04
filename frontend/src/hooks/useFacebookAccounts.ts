@@ -5,6 +5,7 @@ import {
   deleteFacebookAccount,
   bulkCreateFacebookAccounts,
   syncFacebookAccounts,
+  updateFacebookAccountToken,
   type FacebookAccountAPI,
   type SyncResult,
 } from "@/services/integrations";
@@ -56,6 +57,14 @@ export function useFacebookAccounts() {
     return result;
   };
 
+  const updateToken = async (id: number, accessToken: string) => {
+    const updated = await updateFacebookAccountToken(id, accessToken);
+    invalidateCacheByPrefix("facebook-accounts");
+    invalidateCacheByPrefix("dashboard");
+    await reload();
+    return updated;
+  };
+
   return {
     accounts: data ?? [],
     isLoading,
@@ -65,6 +74,7 @@ export function useFacebookAccounts() {
     removeAccount,
     removeAccounts,
     syncAccounts,
+    updateToken,
     reload,
   };
 }

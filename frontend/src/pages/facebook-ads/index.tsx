@@ -3,18 +3,26 @@ import { FacebookHeader } from "./components/FacebookHeader";
 import { FacebookTable } from "./components/FacebookTable";
 import { AddAccountModal } from "./components/AddAccountModal";
 import { SyncAccountsModal } from "./components/SyncAccountsModal";
+import { UpdateTokenModal } from "./components/UpdateTokenModal";
 import { ConfirmDeleteModal } from "@/components/ConfirmDeleteModal";
 import { useFacebookAccounts } from "@/hooks/useFacebookAccounts";
+import { toast } from "sonner";
 import type { FacebookAccountAPI } from "@/services/integrations";
 
 export default function FacebookAdsPage() {
-  const { accounts, isLoading, addAccount, bulkAddAccounts, removeAccount, removeAccounts, syncAccounts } = useFacebookAccounts();
+  const {
+    accounts, isLoading, addAccount, bulkAddAccounts,
+    removeAccount, removeAccounts, syncAccounts, updateToken,
+  } = useFacebookAccounts();
+
   const [modalOpen, setModalOpen] = useState(false);
   const [syncOpen, setSyncOpen] = useState(false);
   const [syncTarget, setSyncTarget] = useState<{ token: string; businessId: string }>({ token: "", businessId: "" });
   const [deleteTargets, setDeleteTargets] = useState<FacebookAccountAPI[]>([]);
+  const [updateTokenTargets, setUpdateTokenTargets] = useState<FacebookAccountAPI[]>([]);
   const [isDeleting, setIsDeleting] = useState(false);
   const [isAdding, setIsAdding] = useState(false);
+  const [isUpdatingToken, setIsUpdatingToken] = useState(false);
   const [prefillToken, setPrefillToken] = useState<string | undefined>();
 
   const openAddModal = () => {
@@ -33,7 +41,7 @@ export default function FacebookAdsPage() {
       await addAccount(label, accountId, accessToken, businessId);
       setModalOpen(false);
     } catch {
-      alert("Erro ao adicionar conta Facebook");
+      toast.error("Erro ao adicionar conta Facebook");
     } finally {
       setIsAdding(false);
     }
@@ -49,19 +57,14 @@ export default function FacebookAdsPage() {
       await bulkAddAccounts(items, accessToken, businessId);
       setModalOpen(false);
     } catch {
-      alert("Erro ao adicionar contas Facebook");
+      toast.error("Erro ao adicionar contas Facebook");
     } finally {
       setIsAdding(false);
     }
   };
 
-  const handleDeleteClick = (account: FacebookAccountAPI) => {
-    setDeleteTargets([account]);
-  };
-
-  const handleDeleteGroupClick = (group: FacebookAccountAPI[]) => {
-    setDeleteTargets(group);
-  };
+  const handleDeleteClick = (account: FacebookAccountAPI) => setDeleteTargets([account]);
+  const handleDeleteGroupClick = (group: FacebookAccountAPI[]) => setDeleteTargets(group);
 
   const handleConfirmDelete = async () => {
     if (!deleteTargets.length) return;
@@ -74,7 +77,7 @@ export default function FacebookAdsPage() {
       }
       setDeleteTargets([]);
     } catch {
-      alert("Erro ao excluir conta(s) Facebook");
+      toast.error("Erro ao excluir conta(s) Facebook");
     } finally {
       setIsDeleting(false);
     }
@@ -83,6 +86,24 @@ export default function FacebookAdsPage() {
   const handleSyncGroup = (token: string, businessId: string | null) => {
     setSyncTarget({ token, businessId: businessId ?? "" });
     setSyncOpen(true);
+  };
+
+  const handleUpdateToken = (group: FacebookAccountAPI[]) => {
+    setUpdateTokenTargets(group);
+  };
+
+  const handleConfirmUpdateToken = async (accessToken: string) => {
+    try {
+      setIsUpdatingToken(true);
+      // Atualiza todas as contas do grupo (mesmo token)
+      await Promise.all(updateTokenTargets.map((a) => updateToken(a.id, accessToken)));
+      setUpdateTokenTargets([]);
+      toast.success("Token atualizado com sucesso!");
+    } catch {
+      toast.error("Erro ao atualizar token");
+    } finally {
+      setIsUpdatingToken(false);
+    }
   };
 
   const deleteLabel = deleteTargets[0]?.label ?? "";
@@ -100,6 +121,7 @@ export default function FacebookAdsPage() {
         onDeleteGroup={handleDeleteGroupClick}
         onDuplicate={openDuplicateModal}
         onSync={handleSyncGroup}
+        onUpdateToken={handleUpdateToken}
       />
       <AddAccountModal
         open={modalOpen}
@@ -115,6 +137,13 @@ export default function FacebookAdsPage() {
         onSync={syncAccounts}
         prefillToken={syncTarget.token}
         prefillBusinessId={syncTarget.businessId}
+      />
+      <UpdateTokenModal
+        open={updateTokenTargets.length > 0}
+        onOpenChange={(open) => !open && setUpdateTokenTargets([])}
+        onUpdate={handleConfirmUpdateToken}
+        accountLabel={updateTokenTargets[0]?.label ?? ""}
+        isLoading={isUpdatingToken}
       />
       <ConfirmDeleteModal
         open={deleteTargets.length > 0}

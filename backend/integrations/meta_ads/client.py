@@ -10,6 +10,26 @@ from typing import Any
 
 logger = logging.getLogger(__name__)
 
+
+class MetaAuthError(Exception):
+    """
+    Erro permanente de autenticação na Meta API.
+    Indica token inválido, expirado ou app deletado.
+    Não deve ser retryado.
+    """
+    def __init__(self, message: str, error_code: int = 0):
+        super().__init__(message)
+        self.error_code = error_code
+
+
+# Códigos de erro da Meta que indicam falha permanente de autenticação
+# Referência: https://developers.facebook.com/docs/graph-api/guides/error-handling
+FATAL_AUTH_CODES = {
+    190,  # Invalid OAuth 2.0 Access Token (token inválido, expirado, app deletado)
+    102,  # Session key invalid or no longer valid
+    2500, # Error parsing OAuth token (general)
+}
+
 # Versão da Graph API via ENV (padrão v25.0)
 GRAPH_API_VERSION = os.getenv("META_GRAPH_API_VERSION", "v25.0")
 GRAPH_API_BASE = f"https://graph.facebook.com/{GRAPH_API_VERSION}"
@@ -52,6 +72,11 @@ class MetaAdsClient:
             if response.status_code == 200:
                 return response
 
+            # Verifica se é erro fatal de autenticação (não retryar)
+            auth_error = self._get_auth_error(response)
+            if auth_error:
+                raise auth_error
+
             # Verifica se é rate limit
             if self._is_rate_limited(response):
                 wait_time = INITIAL_BACKOFF * (2 ** attempt)
@@ -69,6 +94,24 @@ class MetaAdsClient:
         response = await self._client.get(url, params=params)
         response.raise_for_status()
         return response
+
+    @staticmethod
+    def _get_auth_error(response: httpx.Response) -> MetaAuthError | None:
+        """Verifica se a resposta é um erro fatal de autenticação (sem retry)."""
+        if response.status_code in (400, 401, 403):
+            try:
+                body = response.json()
+                error = body.get("error", {})
+                code = error.get("code", 0)
+                message = error.get("message", "Token inválido")
+                if code in FATAL_AUTH_CODES:
+                    logger.error(
+                        f"Erro fatal de autenticação Meta (code={code}): {message}"
+                    )
+                    return MetaAuthError(message, error_code=code)
+            except Exception:
+                pass
+        return None
 
     @staticmethod
     def _is_rate_limited(response: httpx.Response) -> bool:
@@ -119,6 +162,9 @@ class MetaAdsClient:
                 response = await self._request_with_retry(
                     url, request_params,
                 )
+            except MetaAuthError:
+                # Propaga erros de auth para tratamento pelo serviço
+                raise
             except httpx.HTTPStatusError as e:
                 logger.warning(
                     f"Paginação parou com status {e.response.status_code} "

@@ -32,6 +32,7 @@ export interface FacebookAccountAPI {
   account_id: string;
   access_token: string;
   business_id: string | null;
+  token_valid: boolean;
   created_at: string | null;
 }
 
@@ -53,6 +54,16 @@ export async function createFacebookAccount(
 
 export async function deleteFacebookAccount(id: number): Promise<void> {
   await apiRequest(`/facebook/accounts/${id}`, { method: "DELETE" });
+}
+
+export async function updateFacebookAccountToken(
+  id: number,
+  accessToken: string
+): Promise<FacebookAccountAPI> {
+  return apiRequest<FacebookAccountAPI>(`/facebook/accounts/${id}/token`, {
+    method: "PATCH",
+    body: { access_token: accessToken },
+  });
 }
 
 export async function bulkCreateFacebookAccounts(

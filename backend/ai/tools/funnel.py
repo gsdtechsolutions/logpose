@@ -30,7 +30,9 @@ def query_conversion_funnel(days_back: int = 30) -> str:
         ds = date_start.strftime("%Y-%m-%d")
         de = now.strftime("%Y-%m-%d")
 
-        account = db.query(FacebookAccount).first()
+        account = db.query(FacebookAccount).filter(
+            FacebookAccount.token_valid.is_(True)
+        ).first()
         if not account:
             return "⚠️ Nenhuma conta do Facebook Ads configurada."
 

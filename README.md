@@ -39,6 +39,8 @@ A maneira mais rápida e segura de colocar o **Log Pose** no ar. Essa opção co
 
 [➡️ Clique aqui para instalar em 1 clique](https://ilumin.app/?src=logpose)
 
+[![Deploy to Ilumin](https://cdn.ilumin.app/static/banner-git.webp)](https://ilumin.app/?src=logpose)
+
 > **Por que recomendamos o Deploy Automático?**
 > A infraestrutura em nuvem lida com a parte pesada (proxy reverso, criação de redes isoladas e renovação de certificados). Você foca apenas em usar o aplicativo e escalar o seu negócio.
 

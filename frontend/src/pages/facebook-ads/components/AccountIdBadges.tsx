@@ -8,6 +8,7 @@ interface AccountIdBadgesProps {
   accountIds: string[];
   onChange: (ids: string[]) => void;
   disabled?: boolean;
+  hideList?: boolean;
 }
 
 /** Strips "act_" prefix if present and returns only the numeric part */
@@ -21,7 +22,7 @@ function ensureActPrefix(value: string): string {
   return raw ? `act_${raw}` : "";
 }
 
-export function AccountIdBadges({ accountIds, onChange, disabled }: AccountIdBadgesProps) {
+export function AccountIdBadges({ accountIds, onChange, disabled, hideList }: AccountIdBadgesProps) {
   const [inputValue, setInputValue] = useState("");
 
   const addId = useCallback(() => {
@@ -56,14 +57,14 @@ export function AccountIdBadges({ accountIds, onChange, disabled }: AccountIdBad
     <div className="space-y-2">
       <Label>
         Ad Account ID
-        {accountIds.length > 0 && (
+        {!hideList && accountIds.length > 0 && (
           <span className="ml-1.5 text-xs text-muted-foreground">
             ({accountIds.length} {accountIds.length === 1 ? "conta" : "contas"})
           </span>
         )}
       </Label>
 
-      {accountIds.length > 0 && (
+      {!hideList && accountIds.length > 0 && (
         <div className="flex flex-wrap gap-1.5 p-2 border rounded-md bg-muted/30 max-h-[120px] overflow-y-auto">
           {accountIds.map((id) => (
             <Badge

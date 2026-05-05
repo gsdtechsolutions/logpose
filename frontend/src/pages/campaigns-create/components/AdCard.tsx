@@ -76,7 +76,7 @@ export function AdCard({ ad, index, onUpdate, onRemove, onReplaceMedia }: AdCard
         <input
           ref={fileInputRef}
           type="file"
-          accept="image/*,video/*"
+          accept="image/jpeg,image/png,video/mp4,video/quicktime"
           className="hidden"
           onChange={handleFileChange}
         />

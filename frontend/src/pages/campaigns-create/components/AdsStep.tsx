@@ -23,7 +23,8 @@ export function AdsStep({ form, onUpdate, onAddAd, onUpdateAd, onRemoveAd, onUpd
       e.preventDefault();
       const files = Array.from(e.dataTransfer.files);
       files.forEach((file) => {
-        if (file.type.startsWith("image/") || file.type.startsWith("video/")) {
+        const t = file.type;
+        if (t === "image/jpeg" || t === "image/png" || t === "video/mp4" || t === "video/quicktime") {
           onAddAd(file);
         }
       });
@@ -77,7 +78,7 @@ export function AdsStep({ form, onUpdate, onAddAd, onUpdateAd, onRemoveAd, onUpd
           id="media-upload"
           type="file"
           multiple
-          accept="image/*,video/*"
+          accept="image/jpeg,image/png,video/mp4,video/quicktime"
           className="hidden"
           onChange={handleFileInput}
         />

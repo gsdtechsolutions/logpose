@@ -6,6 +6,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import type { AdFormData } from "../hooks/useCampaignForm";
 import { CTA_OPTIONS, DEFAULT_UTM_PARAMS } from "../utils/defaults";
 import { LinkInput } from "./LinkInput";
+import { HiddenAdToggle } from "./HiddenAdToggle";
 
 interface IndividualFieldsProps {
   ad: AdFormData;
@@ -56,6 +57,12 @@ export function IndividualFields({
       <LinkInput
         value={ad.link}
         onChange={(v) => onUpdate({ link: v })}
+      />
+
+      {/* Esconder Anúncio — link preview (caption) */}
+      <HiddenAdToggle
+        value={ad.display_url}
+        onChange={(v) => onUpdate({ display_url: v })}
       />
 
       {/* CTA */}

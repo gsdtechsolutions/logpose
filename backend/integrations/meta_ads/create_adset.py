@@ -96,7 +96,7 @@ async def create_adset(
 
         try:
             body = response.json()
-            error_msg = body.get("error", {}).get("message", f"Erro {response.status_code}")
+            error_msg = body.get("error", {}).get("error_user_msg") or body.get("error", {}).get("message", f"Erro {response.status_code}")
             error_code = body.get("error", {}).get("code", "N/A")
             error_subcode = body.get("error", {}).get("error_subcode", "N/A")
             logger.error(f"Erro ao criar Ad Set: {error_msg} (code={error_code}, subcode={error_subcode})")

@@ -1,77 +1,14 @@
 import { useState, useCallback } from "react";
-import type { InterestData } from "@/services/campaignCreator";
 import { DEFAULT_UTM_PARAMS, DEFAULT_CTA } from "../utils/defaults";
 import { getNextMidnightSP } from "../utils/schedule";
+import type {
+  AdFormData, BulkEditData, AccountMetaConfig, CampaignFormState,
+} from "../types";
+import { INITIAL_BULK_DATA } from "../types";
 
-export interface AdFormData {
-  name: string;
-  primary_text: string;
-  headline: string;
-  description: string;
-  link: string;
-  utm_params: string;
-  extra_params: string;
-  cta_type: string;
-  media_type: "image" | "video";
-  file: File | null;
-  preview_url: string;
-}
-
-/** Dados da edição em massa — persistem independente dos ads */
-export interface BulkEditData {
-  primary_text: string;
-  headline: string;
-  description: string;
-  link: string;
-  extra_params: string;
-  cta_type: string;
-}
-
-export const INITIAL_BULK_DATA: BulkEditData = {
-  primary_text: "",
-  headline: "",
-  description: "",
-  link: "",
-  extra_params: "",
-  cta_type: DEFAULT_CTA,
-};
-
-export interface CampaignFormState {
-  // Step 0 — Contas de anúncio (multi-select)
-  accountIds: number[];
-  videoId: string;
-  videoLabel: string;
-  checkoutId: string;
-  checkoutLabel: string;
-  productId: string;
-  productLabel: string;
-  // Step 1 — Campanha
-  campaignName: string;
-  campaignCount: number;
-  dailyBudget: number;
-  bidStrategy: string;
-  bidAmount: number | null;
-  roasFloor: number | null;
-  // Step 2 — Conjunto
-  adsetName: string;
-  adsetCount: number;
-  pixelId: string;
-  startTime: string;
-  ageMin: number;
-  ageMax: number;
-  gender: number;
-  interests: InterestData[];
-  pageId: string;
-  pageLabel: string;
-  instagramActorId: string;
-  instagramLabel: string;
-  // Step 3 — Anúncios
-  batchMode: boolean;
-  bulkData: BulkEditData;
-  ads: AdFormData[];
-  // Step 4 — Revisão
-  publishActive: boolean;
-}
+// Re-export para retrocompatibilidade dos imports existentes
+export type { AdFormData, BulkEditData, AccountMetaConfig, CampaignFormState };
+export { INITIAL_BULK_DATA };
 
 const INITIAL_STATE: CampaignFormState = {
   accountIds: [],
@@ -99,6 +36,8 @@ const INITIAL_STATE: CampaignFormState = {
   pageLabel: "",
   instagramActorId: "",
   instagramLabel: "",
+  sharedMetaConfig: true,
+  accountMetaConfigs: {},
   batchMode: true,
   bulkData: { ...INITIAL_BULK_DATA },
   ads: [],
@@ -128,7 +67,6 @@ export function useCampaignForm() {
     setForm((prev) => {
       const bulk = prev.bulkData;
       const firstAd = prev.ads[0];
-      // Em modo individual, herda dados do primeiro criativo (se existir)
       const source = prev.batchMode ? bulk : (firstAd || bulk);
       const newAd: AdFormData = {
         name: "",
@@ -136,6 +74,7 @@ export function useCampaignForm() {
         headline: source.headline || "",
         description: source.description || "",
         link: source.link || "",
+        display_url: source.display_url || "",
         utm_params: DEFAULT_UTM_PARAMS,
         extra_params: source.extra_params || "",
         cta_type: source.cta_type || DEFAULT_CTA,
@@ -156,13 +95,9 @@ export function useCampaignForm() {
   }, []);
 
   const removeAd = useCallback((index: number) => {
-    setForm((prev) => {
-      const ads = prev.ads.filter((_, i) => i !== index);
-      return { ...prev, ads };
-    });
+    setForm((prev) => ({ ...prev, ads: prev.ads.filter((_, i) => i !== index) }));
   }, []);
 
-  /** Atualiza bulkData e sincroniza com todos os ads existentes */
   const updateBulkData = useCallback((data: Partial<BulkEditData>) => {
     setForm((prev) => {
       const newBulk = { ...prev.bulkData, ...data };
@@ -170,6 +105,26 @@ export function useCampaignForm() {
       return { ...prev, bulkData: newBulk, ads };
     });
   }, []);
+
+  const updateAccountConfig = useCallback(
+    (accountId: number, data: Partial<AccountMetaConfig>) => {
+      setForm((prev) => ({
+        ...prev,
+        accountMetaConfigs: {
+          ...prev.accountMetaConfigs,
+          [accountId]: {
+            pixelId: prev.accountMetaConfigs[accountId]?.pixelId ?? "",
+            pageId: prev.accountMetaConfigs[accountId]?.pageId ?? "",
+            pageLabel: prev.accountMetaConfigs[accountId]?.pageLabel ?? "",
+            instagramActorId: prev.accountMetaConfigs[accountId]?.instagramActorId ?? "",
+            instagramLabel: prev.accountMetaConfigs[accountId]?.instagramLabel ?? "",
+            ...data,
+          },
+        },
+      }));
+    },
+    []
+  );
 
   const resetForm = useCallback(() => {
     setForm({ ...INITIAL_STATE, startTime: getNextMidnightSP() });
@@ -181,16 +136,7 @@ export function useCampaignForm() {
   const goToStep = useCallback((step: number) => setCurrentStep(step), []);
 
   return {
-    form,
-    currentStep,
-    updateField,
-    addAd,
-    updateAd,
-    removeAd,
-    updateBulkData,
-    resetForm,
-    nextStep,
-    prevStep,
-    goToStep,
+    form, currentStep, updateField, addAd, updateAd, removeAd,
+    updateBulkData, updateAccountConfig, resetForm, nextStep, prevStep, goToStep,
   };
 }

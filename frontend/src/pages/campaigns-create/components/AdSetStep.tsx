@@ -1,31 +1,42 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import type { CampaignFormState } from "../hooks/useCampaignForm";
+import { Switch } from "@/components/ui/switch";
+import type { CampaignFormState, AccountMetaConfig } from "../hooks/useCampaignForm";
 import type { PixelData, PageData, InstagramAccount, InterestData } from "@/services/campaignCreator";
+import type { AccountMetaData } from "../hooks/useMetaData";
+import type { FacebookAccountAPI } from "@/services/integrations";
 import { generateAdSetName } from "../utils/naming";
 import { RiLightbulbLine } from "@remixicon/react";
 import { TargetingSection } from "./TargetingSection";
 import { DateTimePicker } from "./DateTimePicker";
+import { SharedMetaSelectors } from "./SharedMetaSelectors";
+import { AccountMetaConfigCard } from "./AccountMetaConfigCard";
 
 interface AdSetStepProps {
   form: CampaignFormState;
   onUpdate: <K extends keyof CampaignFormState>(key: K, value: CampaignFormState[K]) => void;
+  onUpdateAccountConfig: (accountId: number, data: Partial<AccountMetaConfig>) => void;
   pixels: PixelData[];
   pages: PageData[];
   instagramAccounts: InstagramAccount[];
   interestResults: InterestData[];
   onSearchInterest: (query: string) => void;
+  accounts: FacebookAccountAPI[];
+  multiAccountData: Record<number, AccountMetaData>;
 }
 
 export function AdSetStep({
-  form, onUpdate, pixels, pages, instagramAccounts, interestResults, onSearchInterest,
+  form, onUpdate, onUpdateAccountConfig, pixels, pages, instagramAccounts,
+  interestResults, onSearchInterest, accounts, multiAccountData,
 }: AdSetStepProps) {
   const suggestedName = generateAdSetName(
     form.campaignName.split(" | ")[1] || form.campaignName,
     form.ageMin, form.ageMax, form.gender, form.interests.length > 0
   );
+
+  const isMultiAccount = form.accountIds.length > 1;
+  const selectedAccounts = accounts.filter((a) => form.accountIds.includes(a.id));
 
   return (
     <div className="space-y-4">
@@ -57,83 +68,61 @@ export function AdSetStep({
             <div className="space-y-2">
               <Label>Qtd. Conjuntos</Label>
               <Input
-                type="number"
-                min={1}
-                max={50}
+                type="number" min={1} max={50}
                 value={form.adsetCount}
                 onChange={(e) => onUpdate("adsetCount", Math.max(1, parseInt(e.target.value) || 1))}
               />
-              {form.adsetCount > 1 && (
+            </div>
+          </div>
+
+          {/* Toggle — só aparece com multi-account */}
+          {isMultiAccount && (
+            <div className="flex items-center justify-between p-3 rounded-lg border bg-muted/30">
+              <div>
+                <p className="text-sm font-medium">Mesmo Pixel / Página em todas as contas</p>
                 <p className="text-xs text-muted-foreground">
-                  1-{form.adsetCount}-x
+                  {form.sharedMetaConfig
+                    ? "Todas as contas usarão o mesmo pixel, página e Instagram"
+                    : "Configure pixel, página e Instagram por conta"}
                 </p>
-              )}
+              </div>
+              <Switch
+                checked={form.sharedMetaConfig}
+                onCheckedChange={(v) => onUpdate("sharedMetaConfig", v)}
+              />
             </div>
-          </div>
+          )}
 
-          {/* Pixel | Página do Facebook | Instagram — side by side */}
-          <div className="grid grid-cols-3 gap-4">
-            <div className="space-y-2">
-              <Label>Pixel</Label>
-              <Select value={form.pixelId} onValueChange={(v) => onUpdate("pixelId", v)}>
-                <SelectTrigger className="w-full">
-                  <SelectValue placeholder="Selecione" />
-                </SelectTrigger>
-                <SelectContent>
-                  {pixels.map((p) => (
-                    <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="space-y-2">
-              <Label>Página do Facebook</Label>
-              <Select value={form.pageId} onValueChange={(v) => {
-                onUpdate("pageId", v);
-                const page = pages.find((p) => p.id === v);
-                onUpdate("pageLabel", page?.name ?? "");
-              }}>
-                <SelectTrigger className="w-full">
-                  <SelectValue placeholder="Selecione" />
-                </SelectTrigger>
-                <SelectContent>
-                  {pages.map((p) => (
-                    <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="space-y-2">
-              <Label>Instagram</Label>
-              <Select
-                value={form.instagramActorId || "none"}
-                onValueChange={(v) => {
-                  const id = v === "none" ? "" : v;
-                  onUpdate("instagramActorId", id);
-                  const ig = instagramAccounts.find((a) => a.id === v);
-                  onUpdate("instagramLabel", ig ? `@${ig.username}` : "");
-                }}
-              >
-                <SelectTrigger className="w-full">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="none">Sem Instagram</SelectItem>
-                  {instagramAccounts.map((ig) => (
-                    <SelectItem key={ig.id} value={ig.id}>@{ig.username} ({ig.id})</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
+          {/* Shared selectors (default) */}
+          {(form.sharedMetaConfig || !isMultiAccount) && (
+            <SharedMetaSelectors
+              form={form} onUpdate={onUpdate}
+              pixels={pixels} pages={pages} instagramAccounts={instagramAccounts}
+            />
+          )}
 
-          {/* Programação — DateTimePicker (Calendar + Dropdowns 24h) */}
+          {/* Per-account selectors */}
+          {!form.sharedMetaConfig && isMultiAccount && (
+            <div className="space-y-2">
+              {selectedAccounts.map((account) => (
+                <AccountMetaConfigCard
+                  key={account.id}
+                  account={account}
+                  config={form.accountMetaConfigs[account.id] ?? {
+                    pixelId: "", pageId: "", pageLabel: "",
+                    instagramActorId: "", instagramLabel: "",
+                  }}
+                  metaData={multiAccountData[account.id]}
+                  onUpdate={onUpdateAccountConfig}
+                />
+              ))}
+            </div>
+          )}
+
+          {/* Programação */}
           <div className="space-y-2">
             <Label>Programação (Timezone São Paulo)</Label>
-            <DateTimePicker
-              value={form.startTime}
-              onChange={(iso) => onUpdate("startTime", iso)}
-            />
+            <DateTimePicker value={form.startTime} onChange={(iso) => onUpdate("startTime", iso)} />
             <p className="text-xs text-muted-foreground">
               Padrão: próxima meia-noite. Selecione a data e hora de início.
             </p>
@@ -142,10 +131,8 @@ export function AdSetStep({
       </Card>
 
       <TargetingSection
-        form={form}
-        onUpdate={onUpdate}
-        interestResults={interestResults}
-        onSearchInterest={onSearchInterest}
+        form={form} onUpdate={onUpdate}
+        interestResults={interestResults} onSearchInterest={onSearchInterest}
       />
     </div>
   );

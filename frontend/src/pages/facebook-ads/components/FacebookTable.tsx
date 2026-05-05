@@ -80,10 +80,11 @@ export function FacebookTable({
   const grouped = useMemo(() => {
     const map: Record<string, FacebookAccountAPI[]> = {};
     for (const account of accounts) {
-      if (!map[account.label]) map[account.label] = [];
-      map[account.label].push(account);
+      const groupKey = account.business_id || `solo_${account.id}`;
+      if (!map[groupKey]) map[groupKey] = [];
+      map[groupKey].push(account);
     }
-    return Object.values(map);
+    return Object.entries(map);
   }, [accounts]);
 
   return (
@@ -101,22 +102,39 @@ export function FacebookTable({
               </TableRow>
             </TableHeader>
             <TableBody>
-              {grouped.map((group) => {
+              {grouped.map(([groupKey, group]) => {
                 const isInvalid = group.some((a) => !a.token_valid);
+                const hasBm = !groupKey.startsWith("solo_");
+                const groupLabel = hasBm
+                  ? `BM ${groupKey}`
+                  : group[0].label;
+
                 return (
                   <TableRow
-                    key={group[0].label}
+                    key={groupKey}
                     className={isInvalid ? "bg-destructive/5" : undefined}
                   >
-                    <TableCell className="font-medium">{group[0].label}</TableCell>
+                    <TableCell className="font-medium">
+                      <div className="flex flex-col gap-0.5">
+                        <span>{groupLabel}</span>
+                        {hasBm && (
+                          <span className="text-[10px] text-muted-foreground font-mono font-normal">
+                            {group.length} conta{group.length > 1 ? "s" : ""}
+                          </span>
+                        )}
+                      </div>
+                    </TableCell>
                     <TableCell>
                       <div className="flex flex-wrap gap-1.5">
                         {group.map((account) => (
                           <div
                             key={account.id}
-                            className="flex items-center gap-1 bg-muted/60 rounded px-2 py-0.5 font-mono text-xs text-muted-foreground"
+                            className="flex items-center gap-1 bg-muted/60 rounded px-2 py-0.5 text-xs text-muted-foreground"
                           >
-                            <span>{account.account_id}</span>
+                            <span className="truncate max-w-32">{account.label}</span>
+                            <span className="font-mono text-muted-foreground/60">
+                              {account.account_id}
+                            </span>
                             <TooltipProvider delayDuration={200}>
                               <Tooltip>
                                 <TooltipTrigger asChild>

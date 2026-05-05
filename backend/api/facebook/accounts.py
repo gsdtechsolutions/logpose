@@ -2,12 +2,19 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from pydantic import BaseModel
 from datetime import datetime
+import logging
+import httpx
+import os
 
 from database.core.connection import get_db
 from database.models.facebook_account import FacebookAccount
 from api.auth.deps import get_current_user
 
+logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/facebook", tags=["facebook"])
+
+GRAPH_API_VERSION = os.getenv("META_GRAPH_API_VERSION", "v25.0")
+GRAPH_API_BASE = f"https://graph.facebook.com/{GRAPH_API_VERSION}"
 
 
 class FacebookAccountCreate(BaseModel):
@@ -39,7 +46,7 @@ def list_accounts(
 
 
 @router.post("/accounts", response_model=FacebookAccountResponse, status_code=201)
-def create_account(
+async def create_account(
     payload: FacebookAccountCreate,
     db: Session = Depends(get_db),
     _=Depends(get_current_user),
@@ -53,8 +60,11 @@ def create_account(
             detail="Essa conta já está cadastrada"
         )
 
+    real_name = await _fetch_account_name(payload.access_token, payload.account_id)
+    label = real_name or payload.label
+
     account = FacebookAccount(
-        label=payload.label,
+        label=label,
         account_id=payload.account_id,
         access_token=payload.access_token,
         business_id=payload.business_id,
@@ -73,7 +83,7 @@ class FacebookBulkCreate(BaseModel):
 
 
 @router.post("/accounts/bulk", response_model=list[FacebookAccountResponse], status_code=201)
-def create_accounts_bulk(
+async def create_accounts_bulk(
     payload: FacebookBulkCreate,
     db: Session = Depends(get_db),
     _=Depends(get_current_user),
@@ -81,14 +91,18 @@ def create_accounts_bulk(
     created = []
     for item in payload.accounts:
         account_id = item.get("account_id", "").strip()
-        label = item.get("label", "").strip()
-        if not account_id or not label:
+        fallback_label = item.get("label", "").strip()
+        if not account_id:
             continue
         existing = db.query(FacebookAccount).filter(
             FacebookAccount.account_id == account_id
         ).first()
         if existing:
             continue
+
+        real_name = await _fetch_account_name(payload.access_token, account_id)
+        label = real_name or fallback_label or account_id
+
         account = FacebookAccount(
             label=label,
             account_id=account_id,
@@ -137,3 +151,23 @@ def delete_account(
         raise HTTPException(status_code=404, detail="Conta Facebook não encontrada")
     db.delete(account)
     db.commit()
+
+
+async def _fetch_account_name(access_token: str, account_id: str) -> str | None:
+    """Busca o nome real da conta de anúncio na Graph API."""
+    act_id = account_id if account_id.startswith("act_") else f"act_{account_id}"
+    url = f"{GRAPH_API_BASE}/{act_id}"
+    params = {"access_token": access_token, "fields": "name"}
+
+    try:
+        async with httpx.AsyncClient(timeout=10.0) as client:
+            resp = await client.get(url, params=params)
+            if resp.status_code == 200:
+                name = resp.json().get("name", "")
+                if name:
+                    logger.info(f"Nome real da conta {act_id}: {name}")
+                    return name
+            logger.warning(f"Falha ao buscar nome de {act_id}: {resp.status_code}")
+    except Exception as e:
+        logger.warning(f"Erro ao buscar nome de {act_id}: {e}")
+    return None

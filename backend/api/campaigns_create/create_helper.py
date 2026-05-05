@@ -21,19 +21,10 @@ async def create_for_single_account(
     file_bytes_list: list[tuple[bytes, str, bool]],
     status: str,
     account_label: str = "",
+    account_id_db: int = 0,
 ) -> dict:
-    """
-    Cria toda a estrutura (campaigns, adsets, ads) em uma conta.
+    import asyncio
     
-    Returns:
-        {
-            "campaigns_created": int,
-            "ads_created": int,
-            "first_campaign_id": str | None,
-            "first_adset_id": str | None,
-            "errors": list[str],
-        }
-    """
     errors: list[str] = []
     campaign_count = max(1, int(data.get("campaign_count", 1)))
     adset_count = max(1, int(data.get("adset_count", 1)))
@@ -42,58 +33,77 @@ async def create_for_single_account(
     first_adset_id: str | None = None
 
     acc_label = f"[{account_label}]" if account_label else ""
+    sem = asyncio.Semaphore(3)
 
-    for camp_i in range(campaign_count):
+    async def _process_campaign(camp_i):
+        nonlocal total_ads_created, first_campaign_id, first_adset_id
+        if errors:
+            return
+        
         camp_label = f"{acc_label}[Camp {camp_i + 1}/{campaign_count}]"
-
         campaign_name = data["campaign_name"]
         if campaign_count > 1:
             campaign_name = f"{campaign_name} #{camp_i + 1:02d}"
 
-        camp_result = await create_campaign(
-            access_token=token,
-            account_id=act_id,
-            name=campaign_name,
-            daily_budget_reais=data["daily_budget"],
-            bid_strategy=data.get("bid_strategy", "VOLUME"),
-            status=status,
-        )
+        async with sem:
+            if errors: return
+            camp_result = await create_campaign(
+                access_token=token,
+                account_id=act_id,
+                name=campaign_name,
+                daily_budget_reais=data["daily_budget"],
+                bid_strategy=data.get("bid_strategy", "VOLUME"),
+                status=status,
+            )
 
         if not camp_result["success"]:
             errors.append(f"{camp_label} Erro na campanha: {camp_result['error']}")
-            continue
+            return
 
         campaign_id = camp_result["campaign_id"]
         logger.info(f"{camp_label} Campanha criada: {campaign_id}")
-
         if first_campaign_id is None:
             first_campaign_id = campaign_id
 
-        for adset_i in range(adset_count):
+        # AdSets em paralelo para esta campanha
+        async def _process_adset(adset_i):
+            nonlocal total_ads_created, first_adset_id
+            if errors: return
             adset_label = f"{camp_label}[CJ {adset_i + 1}/{adset_count}]"
-            ads_created, adset_id = await _create_adset_with_ads(
-                token=token,
-                act_id=act_id,
-                campaign_id=campaign_id,
-                data=data,
-                adset_i=adset_i,
-                adset_count=adset_count,
-                file_bytes_list=file_bytes_list,
-                status=status,
-                errors=errors,
-                label=adset_label,
-            )
+            
+            async with sem:
+                if errors: return
+                ads_created, adset_id = await _create_adset_with_ads(
+                    token=token,
+                    act_id=act_id,
+                    campaign_id=campaign_id,
+                    data=data,
+                    adset_i=adset_i,
+                    adset_count=adset_count,
+                    file_bytes_list=file_bytes_list,
+                    status=status,
+                    errors=errors,
+                    label=adset_label,
+                )
+                
+            if adset_id and first_adset_id is None:
+                first_adset_id = adset_id
             total_ads_created += ads_created
 
-            if first_adset_id is None and adset_id:
-                first_adset_id = adset_id
+        adset_tasks = [_process_adset(i) for i in range(adset_count)]
+        await asyncio.gather(*adset_tasks)
+
+    camp_tasks = [_process_campaign(i) for i in range(campaign_count)]
+    await asyncio.gather(*camp_tasks)
 
     return {
-        "campaigns_created": campaign_count,
+        "campaigns_created": campaign_count if not errors else 0, # Aproximado se falhou
         "ads_created": total_ads_created,
         "first_campaign_id": first_campaign_id,
         "first_adset_id": first_adset_id,
         "errors": errors,
+        "account_id_db": account_id_db,
+        "account_label": account_label,
     }
 
 

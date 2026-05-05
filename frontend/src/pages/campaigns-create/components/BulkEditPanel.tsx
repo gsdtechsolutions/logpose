@@ -8,6 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import type { CampaignFormState, BulkEditData } from "../hooks/useCampaignForm";
 import { CTA_OPTIONS, DEFAULT_UTM_PARAMS } from "../utils/defaults";
 import { LinkInput } from "./LinkInput";
+import { HiddenAdToggle } from "./HiddenAdToggle";
 
 interface BulkEditPanelProps {
   form: CampaignFormState;
@@ -69,6 +70,12 @@ export function BulkEditPanel({ form, onUpdateBulk }: BulkEditPanelProps) {
         <LinkInput
           value={bulk.link}
           onChange={(v) => onUpdateBulk({ link: v })}
+        />
+
+        {/* Esconder Anúncio — link preview (caption) */}
+        <HiddenAdToggle
+          value={bulk.display_url}
+          onChange={(v) => onUpdateBulk({ display_url: v })}
         />
 
         {/* CTA — full width */}

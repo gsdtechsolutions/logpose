@@ -36,12 +36,15 @@ export function buildExportPayload(form: CampaignFormState): Record<string, unkn
     product_label: form.productLabel,
     ads: form.ads.map((a) => ({
       name: a.name, primary_text: a.primary_text, headline: a.headline,
-      description: a.description, link: a.link, utm_params: a.utm_params,
-      extra_params: a.extra_params, cta_type: a.cta_type, media_type: a.media_type,
+      description: a.description, link: a.link, display_url: a.display_url,
+      utm_params: a.utm_params, extra_params: a.extra_params, cta_type: a.cta_type,
+      media_type: a.media_type,
     })),
     batch_mode: form.batchMode,
     bulk_data: form.bulkData,
     publish_active: form.publishActive,
+    shared_meta_config: form.sharedMetaConfig,
+    account_meta_configs: form.accountMetaConfigs,
   };
 }
 
@@ -99,6 +102,7 @@ export function applyDataToForm(
       headline: (a.headline as string) ?? "",
       description: (a.description as string) ?? "",
       link: (a.link as string) ?? "",
+      display_url: (a.display_url as string) ?? "",
       utm_params: (a.utm_params as string) ?? "",
       extra_params: (a.extra_params as string) ?? "",
       cta_type: (a.cta_type as string) ?? "LEARN_MORE",
@@ -124,6 +128,7 @@ export function applyDataToForm(
       headline: bulk.headline ?? "",
       description: bulk.description ?? "",
       link: bulk.link ?? "",
+      display_url: bulk.display_url ?? "",
       extra_params: bulk.extra_params ?? "",
       cta_type: bulk.cta_type ?? "LEARN_MORE",
     });
@@ -134,6 +139,7 @@ export function applyDataToForm(
       headline: firstAd.headline ?? "",
       description: firstAd.description ?? "",
       link: firstAd.link ?? "",
+      display_url: firstAd.display_url ?? "",
       extra_params: firstAd.extra_params ?? "",
       cta_type: firstAd.cta_type ?? "LEARN_MORE",
     });
@@ -145,6 +151,14 @@ export function applyDataToForm(
   } else if (data.account_id) {
     // Retrocompatibilidade com exports antigos (single account)
     updateField("accountIds", [data.account_id as number]);
+  }
+
+  // Per-account meta configs
+  if (data.shared_meta_config !== undefined) {
+    updateField("sharedMetaConfig", Boolean(data.shared_meta_config));
+  }
+  if (data.account_meta_configs && typeof data.account_meta_configs === "object") {
+    updateField("accountMetaConfigs", data.account_meta_configs as CampaignFormState["accountMetaConfigs"]);
   }
 }
 

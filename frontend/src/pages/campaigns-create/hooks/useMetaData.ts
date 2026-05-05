@@ -58,6 +58,57 @@ export function usePages() {
   return { pages, instagramAccounts, loading, load };
 }
 
+/** Dados Meta (pixels, pages, IG) carregados por conta */
+export interface AccountMetaData {
+  pixels: PixelData[];
+  pages: PageData[];
+  instagramAccounts: InstagramAccount[];
+  loading: boolean;
+}
+
+/**
+ * Hook para carregar pixels/pages/ig de múltiplas contas simultaneamente.
+ * Retorna um mapa accountId → AccountMetaData.
+ */
+export function useMultiAccountMeta() {
+  const [dataMap, setDataMap] = useState<Record<number, AccountMetaData>>({});
+
+  const loadForAccount = useCallback(async (accountId: number) => {
+    setDataMap((prev) => ({
+      ...prev,
+      [accountId]: { ...{ pixels: [], pages: [], instagramAccounts: [], loading: true }, ...prev[accountId], loading: true },
+    }));
+
+    try {
+      const [pixelsData, pagesData] = await Promise.all([
+        fetchPixels(accountId),
+        fetchPages(accountId),
+      ]);
+      setDataMap((prev) => ({
+        ...prev,
+        [accountId]: {
+          pixels: pixelsData,
+          pages: pagesData.pages,
+          instagramAccounts: pagesData.instagram_accounts,
+          loading: false,
+        },
+      }));
+    } catch (err) {
+      console.error(`Erro ao buscar meta data da conta ${accountId}:`, err);
+      setDataMap((prev) => ({
+        ...prev,
+        [accountId]: { pixels: [], pages: [], instagramAccounts: [], loading: false },
+      }));
+    }
+  }, []);
+
+  const loadForAccounts = useCallback(async (accountIds: number[]) => {
+    await Promise.all(accountIds.map(loadForAccount));
+  }, [loadForAccount]);
+
+  return { dataMap, loadForAccount, loadForAccounts };
+}
+
 /**
  * Hook para busca de interesses com debounce.
  */

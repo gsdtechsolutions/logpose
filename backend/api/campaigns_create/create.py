@@ -64,22 +64,45 @@ async def publish_campaign(
     first_campaign_id: str | None = None
     first_adset_id: str | None = None
 
+    # Per-account configs (pixel/page/instagram override)
+    account_configs: dict = data.get("account_configs", {})
+
+    import asyncio
+    
+    # Processa contas em paralelo
+    tasks = []
     for account in fb_accounts:
         acc_label = account.label or account.account_id
         logger.info(f"Criando estrutura na conta: {acc_label} ({account.account_id})")
 
-        result = await create_for_single_account(
-            token=account.access_token,
-            act_id=account.account_id,
-            data=data,
-            file_bytes_list=file_bytes_list,
-            status=status,
-            account_label=acc_label,
+        acc_data = dict(data)
+        acc_cfg = account_configs.get(str(account.id), {})
+        if acc_cfg:
+            if acc_cfg.get("pixel_id"):
+                acc_data["pixel_id"] = acc_cfg["pixel_id"]
+            if acc_cfg.get("page_id"):
+                acc_data["page_id"] = acc_cfg["page_id"]
+            if acc_cfg.get("instagram_actor_id") is not None:
+                acc_data["instagram_actor_id"] = acc_cfg["instagram_actor_id"]
+
+        tasks.append(
+            create_for_single_account(
+                token=account.access_token,
+                act_id=account.account_id,
+                data=acc_data,
+                file_bytes_list=file_bytes_list,
+                status=status,
+                account_label=acc_label,
+                account_id_db=account.id,
+            )
         )
 
+    results = await asyncio.gather(*tasks)
+
+    for result in results:
         acc_result = AccountResult(
-            account_id=account.id,
-            account_label=acc_label,
+            account_id=result["account_id_db"],
+            account_label=result["account_label"],
             success=len(result["errors"]) == 0,
             campaigns_created=result["campaigns_created"],
             ads_created=result["ads_created"],
@@ -91,9 +114,9 @@ async def publish_campaign(
         total_ads += result["ads_created"]
         all_errors.extend(result["errors"])
 
-        if first_campaign_id is None:
+        if first_campaign_id is None and result["first_campaign_id"]:
             first_campaign_id = result["first_campaign_id"]
-        if first_adset_id is None:
+        if first_adset_id is None and result["first_adset_id"]:
             first_adset_id = result["first_adset_id"]
 
     return CampaignCreateResponse(

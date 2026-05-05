@@ -23,7 +23,8 @@ async def fetch_pixels(client: MetaAdsClient) -> list[dict]:
 
 async def _get_business_id(access_token: str, ad_account_id: str) -> str | None:
     """Busca o business_id vinculado à conta de anúncio."""
-    url = f"{GRAPH_API_BASE}/act_{ad_account_id}"
+    act_id = ad_account_id if ad_account_id.startswith("act_") else f"act_{ad_account_id}"
+    url = f"{GRAPH_API_BASE}/{act_id}"
     params = {"access_token": access_token, "fields": "business"}
 
     async with httpx.AsyncClient(timeout=15.0) as http:

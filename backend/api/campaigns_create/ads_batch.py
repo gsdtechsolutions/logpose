@@ -21,21 +21,22 @@ async def create_ads_batch(
     errors: list[str],
     label: str = "",
 ) -> int:
-    """Cria múltiplos ads com upload de mídia para um dado adset_id."""
+    """Cria múltiplos ads com upload de mídia para um dado adset_id.
+    Cancela a operação inteira no primeiro erro de upload ou creative."""
     created_count = 0
 
     for i, ad_data in enumerate(ads):
         media_index = ad_data.get("media_index", i)
         if media_index >= len(file_bytes_list):
             errors.append(f"{label} AD {i+1}: Arquivo de mídia não encontrado")
-            continue
+            break
 
         file_bytes, filename, is_video = file_bytes_list[media_index]
         media_result = await _upload_media(token, act_id, file_bytes, filename, is_video)
 
         if not media_result["success"]:
             errors.append(f"{label} AD {i+1}: Upload falhou — {media_result['error']}")
-            continue
+            break
 
         link = ad_data.get("link", "")
         url_tags = _build_url_tags(
@@ -54,11 +55,12 @@ async def create_ads_batch(
             image_hash=media_result.get("image_hash"),
             video_id=media_result.get("video_id"),
             url_tags=url_tags,
+            display_url=ad_data.get("display_url", ""),
         )
 
         if not creative_result["success"]:
             errors.append(f"{label} AD {i+1}: Creative falhou — {creative_result['error']}")
-            continue
+            break
 
         ad_result = await create_ad(
             access_token=token, account_id=act_id,
@@ -71,6 +73,7 @@ async def create_ads_batch(
             created_count += 1
         else:
             errors.append(f"{label} AD {i+1}: {ad_result['error']}")
+            break
 
     return created_count
 

@@ -24,6 +24,7 @@ async def create_ad_creative(
     image_hash: str | None = None,
     video_id: str | None = None,
     url_tags: str = "",
+    display_url: str = "",
 ) -> dict:
     """
     Cria um Ad Creative com imagem ou vídeo.
@@ -36,11 +37,14 @@ async def create_ad_creative(
     # NOTA: instagram_actor_id foi DEPRECATED na v22.0+, usar instagram_user_id
     story_spec: dict = {"page_id": page_id}
 
-    if instagram_actor_id and instagram_actor_id not in ("", "none") and str(instagram_actor_id).isdigit():
+    if instagram_actor_id in ("", "none"):
+        # Explicitamente selecionado "Sem Instagram"
+        logger.info("Criando ad sem Instagram (page-backed)")
+    elif instagram_actor_id and str(instagram_actor_id).isdigit():
         story_spec["instagram_user_id"] = instagram_actor_id
         logger.info(f"Usando instagram_user_id fornecido: {instagram_actor_id}")
-    else:
-        # Fallback: busca IG account vinculado à conta de anúncio
+    elif instagram_actor_id is None:
+        # Fallback apenas se não foi enviado no payload (retrocompatibilidade)
         ig_id = await _resolve_instagram_user_id(access_token, page_id, account_id)
         if ig_id:
             story_spec["instagram_user_id"] = ig_id
@@ -48,7 +52,7 @@ async def create_ad_creative(
     cta_value = {"link": link}
 
     if video_id:
-        story_spec["video_data"] = {
+        video_data: dict = {
             "video_id": video_id,
             "message": primary_text,
             "title": headline,
@@ -56,11 +60,14 @@ async def create_ad_creative(
             "call_to_action": {"type": cta_type, "value": cta_value},
             "link": link,
         }
-        # Imagem de thumbnail automática se não tiver image_hash
+        # Link preview (caption) — exibido na Ads Library em vez do link real
+        if display_url:
+            video_data["caption"] = display_url
         if image_hash:
-            story_spec["video_data"]["image_hash"] = image_hash
+            video_data["image_hash"] = image_hash
+        story_spec["video_data"] = video_data
     else:
-        story_spec["link_data"] = {
+        link_data: dict = {
             "image_hash": image_hash,
             "link": link,
             "message": primary_text,
@@ -68,6 +75,10 @@ async def create_ad_creative(
             "description": description,
             "call_to_action": {"type": cta_type, "value": cta_value},
         }
+        # Link preview (caption) — exibido na Ads Library em vez do link real
+        if display_url:
+            link_data["caption"] = display_url
+        story_spec["link_data"] = link_data
 
     data = {
         "access_token": access_token,
@@ -173,9 +184,11 @@ def _parse_error(response: httpx.Response) -> str:
     try:
         body = response.json()
         error = body.get("error", {})
-        msg = error.get("message", f"Erro {response.status_code}")
         code = error.get("code", "N/A")
         subcode = error.get("error_subcode", "N/A")
+        # Prefere error_user_msg (mensagem detalhada na língua do usuário)
+        user_msg = error.get("error_user_msg", "")
+        msg = user_msg or error.get("message", f"Erro {response.status_code}")
         logger.error(f"Meta API error detail: code={code}, subcode={subcode}, body={body}")
         return msg
     except Exception:

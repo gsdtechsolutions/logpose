@@ -6,7 +6,8 @@ import type { CampaignFormState } from "../hooks/useCampaignForm";
 import type { FacebookAccountAPI } from "@/services/integrations";
 import { BID_STRATEGY_OPTIONS, CTA_OPTIONS, bidFieldLabel } from "../utils/defaults";
 import { formatScheduleDisplay } from "../utils/schedule";
-import { RiRocketLine, RiMegaphoneLine, RiFocus2Line, RiBrushLine, RiBankLine } from "@remixicon/react";
+import { RiRocketLine, RiMegaphoneLine, RiFocus2Line, RiBrushLine } from "@remixicon/react";
+import { AccountsReviewCard, ReviewRow, truncateText } from "./ReviewHelpers";
 
 interface ReviewStepProps {
   form: CampaignFormState;
@@ -72,16 +73,16 @@ export function ReviewStep({ form, onUpdate, accounts }: ReviewStepProps) {
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-1.5 text-sm">
-          <Row label="Nome" value={form.campaignName} />
-          <Row label="Orçamento Diário" value={`R$ ${form.dailyBudget.toFixed(2)}`} />
-          <Row label="Estratégia" value={strategyLabel} />
+          <ReviewRow label="Nome" value={form.campaignName} />
+          <ReviewRow label="Orçamento Diário" value={`R$ ${form.dailyBudget.toFixed(2)}`} />
+          <ReviewRow label="Estratégia" value={strategyLabel} />
           {form.bidAmount && (
-            <Row label={bidFieldLabel(form.bidStrategy)} value={`R$ ${form.bidAmount.toFixed(2)}`} />
+            <ReviewRow label={bidFieldLabel(form.bidStrategy)} value={`R$ ${form.bidAmount.toFixed(2)}`} />
           )}
-          {form.roasFloor && <Row label="ROAS Mínimo" value={`${form.roasFloor}x`} />}
-          {form.videoLabel && <Row label="Vídeo" value={form.videoLabel} />}
-          {form.checkoutLabel && <Row label="Checkout" value={form.checkoutLabel} />}
-          {form.productLabel && <Row label="Produto" value={form.productLabel} />}
+          {form.roasFloor && <ReviewRow label="ROAS Mínimo" value={`${form.roasFloor}x`} />}
+          {form.videoLabel && <ReviewRow label="Vídeo" value={form.videoLabel} />}
+          {form.checkoutLabel && <ReviewRow label="Checkout" value={form.checkoutLabel} />}
+          {form.productLabel && <ReviewRow label="Produto" value={form.productLabel} />}
         </CardContent>
       </Card>
 
@@ -93,21 +94,40 @@ export function ReviewStep({ form, onUpdate, accounts }: ReviewStepProps) {
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-1.5 text-sm">
-          <Row label="Nome" value={form.adsetName} />
-          <Row label="Pixel" value={form.pixelId} />
-          <Row label="Página" value={
-            form.pageLabel
-              ? `${form.pageLabel} (${form.pageId})`
-              : form.pageId || "—"
-          } />
-          <Row label="Instagram" value={
-            form.instagramActorId
-              ? `${form.instagramLabel || "ID"}: ${form.instagramActorId}`
-              : "Sem Instagram (page-backed)"
-          } />
-          <Row label="Programação" value={formatScheduleDisplay(form.startTime)} />
-          <Row label="Idade" value={`${form.ageMin} — ${form.ageMax === 65 ? "65+" : form.ageMax}`} />
-          <Row label="Gênero" value={genderLabel} />
+          <ReviewRow label="Nome" value={form.adsetName} />
+          {(form.sharedMetaConfig || selectedAccounts.length <= 1) ? (
+            <>
+              <ReviewRow label="Pixel" value={form.pixelId} />
+              <ReviewRow label="Página" value={
+                form.pageLabel
+                  ? `${form.pageLabel} (${form.pageId})`
+                  : form.pageId || "—"
+              } />
+              <ReviewRow label="Instagram" value={
+                form.instagramActorId
+                  ? `${form.instagramLabel || "ID"}: ${form.instagramActorId}`
+                  : "Sem Instagram (page-backed)"
+              } />
+            </>
+          ) : (
+            <div className="space-y-1.5 mt-1">
+              <span className="text-xs text-muted-foreground">Config. por conta:</span>
+              {selectedAccounts.map((acc) => {
+                const cfg = form.accountMetaConfigs[acc.id];
+                return (
+                  <div key={acc.id} className="flex items-center gap-2 py-0.5 pl-2 border-l-2 border-muted">
+                    <span className="text-muted-foreground text-xs w-32 shrink-0 truncate">{acc.label}</span>
+                    <span className="text-xs font-medium">
+                      Pixel: {cfg?.pixelId || "—"} · Página: {cfg?.pageLabel || "—"} · IG: {cfg?.instagramLabel || "Sem"}
+                    </span>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+          <ReviewRow label="Programação" value={formatScheduleDisplay(form.startTime)} />
+          <ReviewRow label="Idade" value={`${form.ageMin} — ${form.ageMax === 65 ? "65+" : form.ageMax}`} />
+          <ReviewRow label="Gênero" value={genderLabel} />
           {form.interests.length > 0 && (
             <div className="flex items-start gap-2 py-1">
               <span className="text-muted-foreground w-28 shrink-0">Interesses</span>
@@ -131,11 +151,11 @@ export function ReviewStep({ form, onUpdate, accounts }: ReviewStepProps) {
         <CardContent className="space-y-1.5 text-sm">
           {(adData.cta_type || adData.link || adData.primary_text) && (
             <>
-              <Row label="CTA" value={ctaLabel} />
-              <Row label="Link" value={adData.link || "—"} />
-              {adData.extra_params && <Row label="Params Extra" value={adData.extra_params} />}
-              <Row label="Texto" value={truncate(adData.primary_text, 80)} />
-              <Row label="Título" value={adData.headline || "—"} />
+              <ReviewRow label="CTA" value={ctaLabel} />
+              <ReviewRow label="Link" value={adData.link || "—"} />
+              {adData.extra_params && <ReviewRow label="Params Extra" value={adData.extra_params} />}
+              <ReviewRow label="Texto" value={truncateText(adData.primary_text, 80)} />
+              <ReviewRow label="Título" value={adData.headline || "—"} />
             </>
           )}
           <div className="flex flex-wrap gap-2 mt-3">
@@ -154,46 +174,3 @@ export function ReviewStep({ form, onUpdate, accounts }: ReviewStepProps) {
     </div>
   );
 }
-
-// ─── Sub-components ──────────────────────────────────────────────────
-
-function AccountsReviewCard({ accounts }: { accounts: FacebookAccountAPI[] }) {
-  if (accounts.length === 0) return null;
-
-  return (
-    <Card>
-      <CardHeader className="pb-2">
-        <CardTitle className="text-sm flex items-center gap-1.5">
-          <RiBankLine className="size-4" /> Contas de Anúncio ({accounts.length})
-        </CardTitle>
-      </CardHeader>
-      <CardContent>
-        <div className="flex flex-wrap gap-2">
-          {accounts.map((acc) => (
-            <Badge key={acc.id} variant="secondary" className="text-xs gap-1">
-              {acc.label}
-              <span className="opacity-60 font-mono">({acc.account_id})</span>
-            </Badge>
-          ))}
-        </div>
-        {accounts.length > 1 && (
-          <p className="text-xs text-muted-foreground mt-2">
-            A mesma estrutura será criada em cada conta acima, sequencialmente.
-          </p>
-        )}
-      </CardContent>
-    </Card>
-  );
-}
-
-function Row({ label, value }: { label: string; value: string }) {
-  return (
-    <div className="flex items-center gap-2 py-0.5">
-      <span className="text-muted-foreground w-28 shrink-0">{label}</span>
-      <span className="font-medium">{value || "—"}</span>
-    </div>
-  );
-}
-
-const truncate = (str: string, max: number) =>
-  !str ? "—" : str.length > max ? str.slice(0, max) + "..." : str;

@@ -10,6 +10,7 @@ interface AutoImportToggleProps {
   accessToken: string;
   onAccountsDiscovered: (accounts: DiscoveredAccount[]) => void;
   onBusinessIdDiscovered?: (businessId: string) => void;
+  onAutoModeChange?: (active: boolean) => void;
   disabled?: boolean;
 }
 
@@ -17,6 +18,7 @@ export function AutoImportToggle({
   accessToken,
   onAccountsDiscovered,
   onBusinessIdDiscovered,
+  onAutoModeChange,
   disabled,
 }: AutoImportToggleProps) {
   const [autoMode, setAutoMode] = useState(false);
@@ -27,6 +29,7 @@ export function AutoImportToggle({
 
   const handleToggle = (checked: boolean) => {
     setAutoMode(checked);
+    onAutoModeChange?.(checked);
     setError(null);
     setFoundCount(null);
     if (!checked) {

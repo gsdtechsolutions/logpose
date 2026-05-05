@@ -4,11 +4,13 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import type { CampaignFormState } from "../hooks/useCampaignForm";
 import type { InterestData } from "@/services/campaignCreator";
-import { RiCloseLine, RiSearchLine } from "@remixicon/react";
-import { COUNTRY_OPTIONS, LOCALE_OPTIONS } from "../utils/targeting";
+import { RiCloseLine, RiSearchLine, RiArrowDownSLine } from "@remixicon/react";
+import { COUNTRY_OPTIONS, LOCALE_OPTIONS, getLocaleLabels } from "../utils/targeting";
 
 interface TargetingSectionProps {
   form: CampaignFormState;
@@ -40,7 +42,6 @@ export function TargetingSection({
 
   const toggleLocale = (localeKey: number) => {
     if (localeKey === 0) {
-      // "Todos os idiomas" — limpa seleção
       onUpdate("locales", []);
       return;
     }
@@ -75,25 +76,40 @@ export function TargetingSection({
           </div>
           <div className="space-y-2">
             <Label>Idioma</Label>
-            <div className="flex flex-wrap gap-x-4 gap-y-2 p-3 border rounded-lg bg-muted/20 min-h-[40px]">
-              {LOCALE_OPTIONS.map((loc) => {
-                const isAll = loc.value === 0;
-                const checked = isAll ? isAllLocales : form.locales.includes(loc.value);
-                return (
-                  <label key={loc.value} className="flex items-center gap-1.5 text-sm cursor-pointer">
-                    <Checkbox
-                      checked={checked}
-                      onCheckedChange={() => toggleLocale(loc.value)}
-                    />
-                    {loc.label}
-                  </label>
-                );
-              })}
-            </div>
+            <Popover>
+              <PopoverTrigger asChild>
+                <Button
+                  variant="outline"
+                  role="combobox"
+                  className="w-full justify-between font-normal h-9 px-3"
+                >
+                  <span className="truncate text-sm">
+                    {getLocaleLabels(form.locales)}
+                  </span>
+                  <RiArrowDownSLine className="size-4 shrink-0 opacity-50" />
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-[--radix-popover-trigger-width] p-1" align="start">
+                {LOCALE_OPTIONS.map((loc) => {
+                  const isAll = loc.value === 0;
+                  const checked = isAll ? isAllLocales : form.locales.includes(loc.value);
+                  return (
+                    <button
+                      key={loc.value}
+                      onClick={() => toggleLocale(loc.value)}
+                      className="flex items-center gap-2 w-full rounded-sm px-2 py-1.5 text-sm hover:bg-accent transition-colors cursor-pointer"
+                    >
+                      <Checkbox checked={checked} tabIndex={-1} className="pointer-events-none" />
+                      {loc.label}
+                    </button>
+                  );
+                })}
+              </PopoverContent>
+            </Popover>
           </div>
         </div>
 
-        {/* Idade + Gênero — mesma row */}
+        {/* Idade + Gênero */}
         <div className="grid grid-cols-3 gap-4">
           <div className="space-y-2">
             <Label>Idade Mínima</Label>

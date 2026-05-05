@@ -48,7 +48,7 @@ A maneira mais rápida e segura de colocar o **Log Pose** no ar. Essa opção co
 
 Preparamos um guia passo a passo em vídeo. Mostramos o aplicativo por dentro e como você pode ter a sua própria estrutura rodando em menos de 5 minutos.
 
-[![Assista ao Tutorial](https://img.youtube.com/vi/18X6f_i844U/maxresdefault.jpg)](https://youtu.be/18X6f_i844U)
+[![Assista ao Tutorial](https://img.youtube.com/vi/lstFZszjCqM/maxresdefault.jpg)](https://www.youtube.com/watch?v=lstFZszjCqM)
 
 ---
 

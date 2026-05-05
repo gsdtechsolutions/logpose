@@ -111,10 +111,25 @@ async def create_adset(
 def _build_targeting(targeting: dict) -> dict:
     """Constrói o objeto targeting para a API da Meta."""
     api_targeting: dict = {
-        "geo_locations": {"countries": ["BR"]},
         "age_min": targeting.get("age_min", 18),
         "age_max": targeting.get("age_max", 65),
     }
+
+    # Países que exigem declaração regulatória e serão excluídos do worldwide
+    EXCLUDED_COUNTRIES = ["TW", "SG", "IN"]  # Taiwan, Singapura, Índia
+
+    # País: "WORLDWIDE" usa country_groups, caso contrário filtra por país
+    country = targeting.get("country", "BR")
+    if country and country != "WORLDWIDE":
+        api_targeting["geo_locations"] = {"countries": [country]}
+    else:
+        api_targeting["geo_locations"] = {"country_groups": ["worldwide"]}
+        api_targeting["excluded_geo_locations"] = {"countries": EXCLUDED_COUNTRIES}
+
+    # Locales (idioma): lista vazia = todos os idiomas (não envia)
+    locales = targeting.get("locales", [])
+    if locales:
+        api_targeting["locales"] = locales
 
     # Gênero: 0=all, 1=male, 2=female
     gender = targeting.get("genders", 0)

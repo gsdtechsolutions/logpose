@@ -1,5 +1,6 @@
 import { useState, useCallback } from "react";
 import { DEFAULT_UTM_PARAMS, DEFAULT_CTA } from "../utils/defaults";
+import { DEFAULT_COUNTRY, DEFAULT_LOCALES } from "../utils/targeting";
 import { getNextMidnightSP } from "../utils/schedule";
 import type {
   AdFormData, BulkEditData, AccountMetaConfig, CampaignFormState,
@@ -31,6 +32,8 @@ const INITIAL_STATE: CampaignFormState = {
   ageMin: 18,
   ageMax: 65,
   gender: 0,
+  country: DEFAULT_COUNTRY,
+  locales: [...DEFAULT_LOCALES],
   interests: [],
   pageId: "",
   pageLabel: "",

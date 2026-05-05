@@ -23,6 +23,7 @@ export function buildExportPayload(form: CampaignFormState): Record<string, unkn
     targeting: {
       age_min: form.ageMin, age_max: form.ageMax,
       genders: form.gender, interests: form.interests,
+      country: form.country, locales: form.locales,
     },
     page_id: form.pageId,
     page_label: form.pageLabel,
@@ -87,6 +88,8 @@ export function applyDataToForm(
     updateField("ageMax", (targeting.age_max as number) ?? 65);
     updateField("gender", (targeting.genders as number) ?? 0);
     updateField("interests", (targeting.interests as CampaignFormState["interests"]) ?? []);
+    updateField("country", (targeting.country as string) ?? "BR");
+    updateField("locales", (targeting.locales as number[]) ?? []);
   }
 
   updateField("pageId", (data.page_id as string) ?? "");

@@ -4,9 +4,11 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
+import { Checkbox } from "@/components/ui/checkbox";
 import type { CampaignFormState } from "../hooks/useCampaignForm";
 import type { InterestData } from "@/services/campaignCreator";
 import { RiCloseLine, RiSearchLine } from "@remixicon/react";
+import { COUNTRY_OPTIONS, LOCALE_OPTIONS } from "../utils/targeting";
 
 interface TargetingSectionProps {
   form: CampaignFormState;
@@ -36,12 +38,61 @@ export function TargetingSection({
     onUpdate("interests", form.interests.filter((i) => i.id !== id));
   };
 
+  const toggleLocale = (localeKey: number) => {
+    if (localeKey === 0) {
+      // "Todos os idiomas" — limpa seleção
+      onUpdate("locales", []);
+      return;
+    }
+    const current = form.locales;
+    if (current.includes(localeKey)) {
+      onUpdate("locales", current.filter((l) => l !== localeKey));
+    } else {
+      onUpdate("locales", [...current, localeKey]);
+    }
+  };
+
+  const isAllLocales = form.locales.length === 0;
+
   return (
     <Card>
       <CardHeader className="pb-3">
         <CardTitle className="text-lg">Público-Alvo</CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">
+        {/* País + Idioma */}
+        <div className="grid grid-cols-2 gap-4">
+          <div className="space-y-2">
+            <Label>País</Label>
+            <Select value={form.country} onValueChange={(v) => onUpdate("country", v)}>
+              <SelectTrigger className="w-full"><SelectValue /></SelectTrigger>
+              <SelectContent>
+                {COUNTRY_OPTIONS.map((c) => (
+                  <SelectItem key={c.value} value={c.value}>{c.label}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="space-y-2">
+            <Label>Idioma</Label>
+            <div className="flex flex-wrap gap-x-4 gap-y-2 p-3 border rounded-lg bg-muted/20 min-h-[40px]">
+              {LOCALE_OPTIONS.map((loc) => {
+                const isAll = loc.value === 0;
+                const checked = isAll ? isAllLocales : form.locales.includes(loc.value);
+                return (
+                  <label key={loc.value} className="flex items-center gap-1.5 text-sm cursor-pointer">
+                    <Checkbox
+                      checked={checked}
+                      onCheckedChange={() => toggleLocale(loc.value)}
+                    />
+                    {loc.label}
+                  </label>
+                );
+              })}
+            </div>
+          </div>
+        </div>
+
         {/* Idade + Gênero — mesma row */}
         <div className="grid grid-cols-3 gap-4">
           <div className="space-y-2">

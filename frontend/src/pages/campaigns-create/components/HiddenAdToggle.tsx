@@ -11,8 +11,8 @@ interface HiddenAdToggleProps {
 }
 
 /**
- * Toggle de "Esconder Anúncio" com input de link preview (caption).
- * O caption é exibido na Ads Library no lugar do link real, dificultando
+ * Toggle de "Esconder Anúncio" com input de display link.
+ * O display link é exibido no anúncio no lugar do link real, dificultando
  * que concorrentes encontrem os criativos.
  */
 export function HiddenAdToggle({ value, onChange }: HiddenAdToggleProps) {
@@ -56,15 +56,15 @@ export function HiddenAdToggle({ value, onChange }: HiddenAdToggleProps) {
                 <RiInformationLine className="size-3.5 text-muted-foreground/60 cursor-help" />
               </TooltipTrigger>
               <TooltipContent side="top" className="flex flex-col gap-1 max-w-64 text-xs leading-relaxed p-3">
-                <p className="font-semibold">O que é o Link Preview?</p>
+                <p className="font-semibold">O que é o Display Link?</p>
                 <p>
-                  O Facebook usa o <strong>caption</strong> (link de preview) na Ads Library
-                  como chave de busca — não a URL real do anúncio.
+                  O Facebook usa o <strong>display link</strong> como o domínio
+                  exibido no anúncio — não a URL real de destino.
                 </p>
                 <p>
-                  Ao inserir um link aleatório aqui, concorrentes que souberem
+                  Ao inserir um link diferente aqui, concorrentes que souberem
                   o domínio real da sua oferta <strong>não encontrarão</strong> seus
-                  criativos na biblioteca de anúncios.
+                  criativos facilmente na biblioteca de anúncios.
                 </p>
               </TooltipContent>
             </Tooltip>
@@ -103,7 +103,7 @@ export function HiddenAdToggle({ value, onChange }: HiddenAdToggleProps) {
             </p>
           )}
           <p className="text-[10px] text-muted-foreground">
-            Esse link aparece na Ads Library no lugar do link real. Use qualquer domínio válido.
+            Esse link aparece no anúncio no lugar do link real (display link). Use qualquer domínio válido.
           </p>
         </div>
       )}

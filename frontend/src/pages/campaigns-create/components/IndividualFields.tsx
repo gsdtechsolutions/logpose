@@ -5,6 +5,7 @@ import { Switch } from "@/components/ui/switch";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import type { AdFormData } from "../hooks/useCampaignForm";
 import { CTA_OPTIONS, DEFAULT_UTM_PARAMS } from "../utils/defaults";
+import { sanitizeExtraParams } from "../utils/params";
 import { LinkInput } from "./LinkInput";
 import { HiddenAdToggle } from "./HiddenAdToggle";
 
@@ -59,7 +60,7 @@ export function IndividualFields({
         onChange={(v) => onUpdate({ link: v })}
       />
 
-      {/* Esconder Anúncio — link preview (caption) */}
+      {/* Esconder Anúncio — display link */}
       <HiddenAdToggle
         value={ad.display_url}
         onChange={(v) => onUpdate({ display_url: v })}
@@ -115,11 +116,15 @@ export function IndividualFields({
               className="font-mono text-xs"
               placeholder="src=cloaker&token=abc123"
               value={ad.extra_params}
-              onChange={(e) => onUpdate({ extra_params: e.target.value })}
+              onChange={(e) => {
+                const v = e.target.value.replace(/^[?&]+/, "");
+                onUpdate({ extra_params: v });
+              }}
+              onBlur={() => onUpdate({ extra_params: sanitizeExtraParams(ad.extra_params) })}
               autoComplete="off"
             />
             <p className="text-[10px] text-muted-foreground">
-              Serão adicionados ao final da URL (ex: cloaker, src, tracking externo).
+              Apenas &amp; (sem ?). Parâmetros UTM fixos são ignorados automaticamente.
             </p>
           </div>
         )}

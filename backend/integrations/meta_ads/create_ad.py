@@ -60,7 +60,7 @@ async def create_ad_creative(
             "call_to_action": {"type": cta_type, "value": cta_value},
             "link": link,
         }
-        # Link preview (caption) — exibido na Ads Library em vez do link real
+        # caption — URL de exibição no anúncio (display URL)
         if display_url:
             video_data["caption"] = display_url
         if image_hash:
@@ -75,7 +75,7 @@ async def create_ad_creative(
             "description": description,
             "call_to_action": {"type": cta_type, "value": cta_value},
         }
-        # Link preview (caption) — exibido na Ads Library em vez do link real
+        # caption — URL de exibição no anúncio (display URL)
         if display_url:
             link_data["caption"] = display_url
         story_spec["link_data"] = link_data

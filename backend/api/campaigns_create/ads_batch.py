@@ -91,5 +91,10 @@ def _build_url_tags(utm_params: str | dict = "", extra_params: str = "") -> str:
     else:
         utm_str = str(utm_params).strip() if utm_params else ""
 
-    parts = [p for p in [utm_str, extra_params.strip()] if p]
+    # Strip leading ? e & — o frontend já sanitiza, mas garantimos aqui
+    utm_str = utm_str.lstrip("?&")
+    extra = extra_params.strip().lstrip("?&").rstrip("&") if extra_params else ""
+
+    parts = [p for p in [utm_str, extra] if p]
     return "&".join(parts)
+

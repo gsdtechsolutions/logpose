@@ -30,11 +30,14 @@ import { AdvancedFeaturesProvider } from "@/contexts/AdvancedFeaturesContext";
 import { ValueDisplayProvider } from "@/contexts/ValueDisplayContext";
 import { MockModeBanner } from "@/components/MockModeBanner";
 
+import { PublishProgressProvider } from "@/contexts/PublishProgressContext";
+
 export default function App() {
   return (
     <PageDataProvider>
     <AdvancedFeaturesProvider>
     <ValueDisplayProvider>
+    <PublishProgressProvider>
     <BrowserRouter>
       <TooltipProvider>
         <AppGuard>
@@ -73,6 +76,7 @@ export default function App() {
       <AIChatProvider />
       <MockModeBanner />
     </BrowserRouter>
+    </PublishProgressProvider>
     </ValueDisplayProvider>
     </AdvancedFeaturesProvider>
     </PageDataProvider>

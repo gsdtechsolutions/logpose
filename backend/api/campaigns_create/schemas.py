@@ -11,7 +11,7 @@ class AdPayload(BaseModel):
     headline: str
     description: str
     link: str
-    display_url: str = ""  # Link preview (caption) — exibido na Ads Library
+    display_url: str = ""  # Display link — exibido no anúncio em vez do link real
     utm_params: dict[str, str] = {}
     cta_type: str = "SHOP_NOW"
     media_type: str = "image"  # "image" ou "video"

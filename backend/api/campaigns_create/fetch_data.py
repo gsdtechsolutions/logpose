@@ -32,6 +32,10 @@ def _get_fb_account(db: Session, account_id: int) -> FacebookAccount:
     return account
 
 
+import httpx
+import logging
+logger = logging.getLogger(__name__)
+
 @router.get("/pixels")
 async def list_pixels(
     account_id: int = Query(...),
@@ -44,6 +48,16 @@ async def list_pixels(
     try:
         pixels = await fetch_pixels(client)
         return {"pixels": pixels}
+    except Exception as e:
+        error_str = str(e)
+        if hasattr(e, "response") and hasattr(e.response, "text"):
+            error_str += f" {e.response.text}"
+            
+        if "API access blocked" in error_str or "OAuthException" in error_str:
+            raise HTTPException(status_code=400, detail="API access blocked")
+            
+        logger.warning(f"Erro ao buscar pixels da conta {account_id}: {e}")
+        return {"pixels": []}
     finally:
         await client.close()
 
@@ -57,14 +71,23 @@ async def list_pages(
     """Lista páginas do Facebook + contas Instagram da conta de anúncio."""
     account = _get_fb_account(db, account_id)
 
-    pages = await fetch_pages(account.access_token, account.account_id)
-
-    # Busca contas Instagram via Ad Account (permissão ads_management)
-    ig_accounts = await fetch_instagram_accounts(
-        account.access_token, account.account_id
-    )
-
-    return {"pages": pages, "instagram_accounts": ig_accounts}
+    try:
+        pages = await fetch_pages(account.access_token, account.account_id)
+        # Busca contas Instagram via Ad Account (permissão ads_management)
+        ig_accounts = await fetch_instagram_accounts(
+            account.access_token, account.account_id
+        )
+        return {"pages": pages, "instagram_accounts": ig_accounts}
+    except Exception as e:
+        error_str = str(e)
+        if hasattr(e, "response") and hasattr(e.response, "text"):
+            error_str += f" {e.response.text}"
+            
+        if "API access blocked" in error_str or "OAuthException" in error_str:
+            raise HTTPException(status_code=400, detail="API access blocked")
+            
+        logger.warning(f"Erro ao buscar páginas/ig da conta {account_id}: {e}")
+        return {"pages": [], "instagram_accounts": []}
 
 
 @router.get("/interests")

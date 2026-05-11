@@ -179,11 +179,9 @@ export function InstallTabs({ apiKey }: InstallTabsProps) {
               <code className="rounded bg-muted px-1 py-0.5 text-xs font-mono">mcpServers</code>.
             </p>
 
-            <CopyField
-              text={manualJson}
-              onCopy={handleCopy}
-              copied={copied && activeTab === "manual"}
-            />
+            <pre className="rounded-md border border-border/60 bg-muted/50 p-4 text-xs font-mono leading-relaxed overflow-x-auto whitespace-pre">
+              {manualJson}
+            </pre>
 
             {!apiKey && (
               <p className="text-xs text-amber-600 dark:text-amber-400 flex items-center gap-1.5">

@@ -3,6 +3,7 @@ import { RiCodeBoxLine } from "@remixicon/react";
 import { ApiKeyCard } from "./components/ApiKeyCard";
 import { InstallTabs } from "./components/InstallTabs";
 import { McpInfoCard } from "./components/McpInfoCard";
+import { ApiEndpointsCard } from "./components/ApiEndpointsCard";
 
 export default function McpPage() {
   const [apiKey, setApiKey] = useState<string | undefined>(undefined);
@@ -33,6 +34,9 @@ export default function McpPage() {
         {/* Right column */}
         <InstallTabs apiKey={apiKey} />
       </div>
+
+      {/* Bottom section */}
+      <ApiEndpointsCard />
     </div>
   );
 }

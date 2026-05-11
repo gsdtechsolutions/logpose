@@ -2,6 +2,7 @@
 Endpoint principal para criar campanhas completas.
 Recebe JSON + arquivos multipart e orquestra toda a criação.
 Suporta multi-account: replica a mesma estrutura em N contas de anúncio.
+SEQUENCIAL: processa uma conta de cada vez para evitar bloqueios da Meta.
 """
 import json
 import logging
@@ -15,10 +16,8 @@ from api.campaigns_create.schemas import (
     CampaignCreateResponse,
     AccountResult,
 )
-from api.campaigns_create.create_helper import (
-    create_for_single_account,
-    VIDEO_EXTENSIONS,
-)
+from api.campaigns_create.create_helper import create_for_single_account, VIDEO_EXTENSIONS
+from integrations.meta_ads.http_factory import get_proxy_url
 
 logger = logging.getLogger(__name__)
 
@@ -38,7 +37,7 @@ async def publish_campaign(
     """
     Cria campanha(s) completa(s): Campaign → Ad Sets → Ads.
     Suporta multi-account via account_ids (lista de IDs internos).
-    A mesma estrutura é replicada sequencialmente em cada conta.
+    Processa SEQUENCIALMENTE para evitar rate limit e bloqueio.
     """
     try:
         data = json.loads(payload)
@@ -67,10 +66,7 @@ async def publish_campaign(
     # Per-account configs (pixel/page/instagram override)
     account_configs: dict = data.get("account_configs", {})
 
-    import asyncio
-    
-    # Processa contas em paralelo
-    tasks = []
+    # Processa contas SEQUENCIALMENTE (evita burst de POSTs)
     for account in fb_accounts:
         acc_label = account.label or account.account_id
         logger.info(f"Criando estrutura na conta: {acc_label} ({account.account_id})")
@@ -85,21 +81,20 @@ async def publish_campaign(
             if acc_cfg.get("instagram_actor_id") is not None:
                 acc_data["instagram_actor_id"] = acc_cfg["instagram_actor_id"]
 
-        tasks.append(
-            create_for_single_account(
-                token=account.access_token,
-                act_id=account.account_id,
-                data=acc_data,
-                file_bytes_list=file_bytes_list,
-                status=status,
-                account_label=acc_label,
-                account_id_db=account.id,
-            )
+        # Buscar proxy para esta conta
+        proxy = get_proxy_url(db, account.id)
+
+        result = await create_for_single_account(
+            token=account.access_token,
+            act_id=account.account_id,
+            data=acc_data,
+            file_bytes_list=file_bytes_list,
+            status=status,
+            account_label=acc_label,
+            account_id_db=account.id,
+            proxy_url=proxy,
         )
 
-    results = await asyncio.gather(*tasks)
-
-    for result in results:
         acc_result = AccountResult(
             account_id=result["account_id_db"],
             account_label=result["account_label"],

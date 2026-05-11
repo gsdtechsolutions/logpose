@@ -15,6 +15,7 @@ import {
   RiTeamLine,
   RiRepeatLine,
   RiBankCardLine,
+  RiCodeBoxLine,
 } from "@remixicon/react";
 import { useLocation, useNavigate } from "react-router-dom";
 import {
@@ -85,6 +86,7 @@ const navGroups: NavGroup[] = [
     label: "Gestão",
     items: [
       { title: "Usuários", icon: RiTeamLine, url: "/users", roles: ["owner", "admin"] },
+      { title: "MCP & API", icon: RiCodeBoxLine, url: "/mcp", roles: ["owner", "admin"] },
     ],
   },
 ];

@@ -12,6 +12,7 @@ from database.models.campaign_action import ActionType
 from api.auth.deps import get_current_user
 from api.campaigns.actions import record_campaign_action
 from integrations.meta_ads.manage import update_budget
+from integrations.meta_ads.http_factory import get_proxy_url
 
 router = APIRouter(prefix="/campaigns", tags=["campaigns"])
 
@@ -47,11 +48,15 @@ async def update_entity_budget(
     if not fb_account:
         raise HTTPException(status_code=404, detail="Conta Facebook não encontrada")
 
+    proxy = get_proxy_url(db, fb_account.id)
+
     result = await update_budget(
         access_token=fb_account.access_token,
         entity_id=payload.entity_id,
         entity_type=payload.entity_type,
         daily_budget_reais=payload.daily_budget,
+        account_id=fb_account.account_id,
+        proxy_url=proxy,
     )
 
     if not result["success"]:

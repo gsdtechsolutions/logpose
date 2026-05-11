@@ -13,6 +13,7 @@ from sqlalchemy.orm import Session
 from api.auth.deps import get_current_user
 from database.core.connection import get_db
 from database.models.facebook_account import FacebookAccount
+from integrations.meta_ads.http_factory import create_http_client, get_proxy_url
 
 logger = logging.getLogger(__name__)
 
@@ -46,13 +47,15 @@ class SyncResult(BaseModel):
 @router.post("/accounts/discover", response_model=DiscoverResponse)
 async def discover_accounts(
     payload: DiscoverRequest,
+    db: Session = Depends(get_db),
     _=Depends(get_current_user),
 ):
     """
     Lista todas as contas de anúncio de um Business Manager.
     Faz paginação automática para BMs com muitas contas.
     """
-    accounts = await _fetch_bm_accounts(payload.access_token, payload.business_id)
+    proxy = get_proxy_url(db)
+    accounts = await _fetch_bm_accounts(payload.access_token, payload.business_id, proxy)
     return DiscoverResponse(accounts=accounts, total=len(accounts))
 
 
@@ -66,7 +69,8 @@ async def sync_accounts(
     Sincroniza contas do BM: busca todas e faz upsert no DB.
     Reutiliza a mesma lógica de fetch do discover.
     """
-    discovered = await _fetch_bm_accounts(payload.access_token, payload.business_id)
+    proxy = get_proxy_url(db)
+    discovered = await _fetch_bm_accounts(payload.access_token, payload.business_id, proxy)
 
     if not discovered:
         raise HTTPException(status_code=400, detail="Nenhuma conta encontrada neste Business Manager")
@@ -98,7 +102,7 @@ async def sync_accounts(
 
 
 async def _fetch_bm_accounts(
-    access_token: str, business_id: str,
+    access_token: str, business_id: str, proxy_url: str | None = None,
 ) -> list[DiscoveredAccount]:
     """Busca todas as contas de anúncio do BM (owned + shared) com paginação."""
     edges = ["owned_ad_accounts", "client_ad_accounts"]
@@ -106,7 +110,7 @@ async def _fetch_bm_accounts(
     accounts: list[DiscoveredAccount] = []
 
     try:
-        async with httpx.AsyncClient(timeout=30.0) as client:
+        async with create_http_client(timeout=30.0, proxy_url=proxy_url) as client:
             for edge in edges:
                 url = f"{GRAPH_API_BASE}/{business_id}/{edge}"
                 params = {

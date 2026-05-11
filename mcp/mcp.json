@@ -1,0 +1,15 @@
+{
+    "mcpServers": {
+        "logpose": {
+            "command": "npx",
+            "args": [
+                "-y",
+                "logpose-mcp",
+                "--api-key",
+                "YOUR_LOGPOSE_API_KEY",
+                "--base-url",
+                "https://YOUR_LOGPOSE_URL"
+            ]
+        }
+    }
+}

@@ -23,6 +23,8 @@ import UsersPage from "@/pages/users";
 import StripePage from "@/pages/stripe";
 import SubscriptionsPage from "@/pages/subscriptions";
 import AdvancedSettingsPage from "@/pages/advanced-settings";
+import McpPage from "@/pages/mcp";
+import AiTrainingPage from "@/pages/ai-training";
 import { AIChatProvider } from "@/components/ai-chat/AIChatProvider";
 import { Toaster } from "@/components/ui/sonner";
 import { PageDataProvider } from "@/contexts/PageDataContext";
@@ -65,6 +67,8 @@ export default function App() {
               <Route path="/stripe" element={<StripePage />} />
               <Route path="/subscriptions" element={<SubscriptionsPage />} />
               <Route path="/advanced-settings" element={<AdvancedSettingsPage />} />
+              <Route path="/mcp" element={<McpPage />} />
+              <Route path="/ai-training" element={<AiTrainingPage />} />
             </Route>
 
             <Route path="/" element={<Navigate to="/dashboard" replace />} />

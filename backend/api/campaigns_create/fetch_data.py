@@ -15,6 +15,7 @@ from integrations.meta_ads.search import (
     fetch_instagram_accounts,
     search_interests,
 )
+from integrations.meta_ads.http_factory import get_proxy_url
 
 router = APIRouter(
     prefix="/campaigns/create",
@@ -44,7 +45,8 @@ async def list_pixels(
 ):
     """Lista pixels da conta de anúncio."""
     account = _get_fb_account(db, account_id)
-    client = MetaAdsClient(account.access_token, account.account_id)
+    proxy = get_proxy_url(db, account.id)
+    client = MetaAdsClient(account.access_token, account.account_id, proxy_url=proxy)
     try:
         pixels = await fetch_pixels(client)
         return {"pixels": pixels}
@@ -70,12 +72,12 @@ async def list_pages(
 ):
     """Lista páginas do Facebook + contas Instagram da conta de anúncio."""
     account = _get_fb_account(db, account_id)
+    proxy = get_proxy_url(db, account.id)
 
     try:
-        pages = await fetch_pages(account.access_token, account.account_id)
-        # Busca contas Instagram via Ad Account (permissão ads_management)
+        pages = await fetch_pages(account.access_token, account.account_id, proxy)
         ig_accounts = await fetch_instagram_accounts(
-            account.access_token, account.account_id
+            account.access_token, account.account_id, proxy,
         )
         return {"pages": pages, "instagram_accounts": ig_accounts}
     except Exception as e:
@@ -99,5 +101,6 @@ async def search_targeting_interests(
 ):
     """Busca interesses para targeting."""
     account = _get_fb_account(db, account_id)
-    results = await search_interests(account.access_token, q)
+    proxy = get_proxy_url(db, account.id)
+    results = await search_interests(account.access_token, q, proxy_url=proxy)
     return {"interests": results}

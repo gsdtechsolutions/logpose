@@ -33,8 +33,8 @@ class MetaAdsService:
     Usa cache + paralelização para minimizar chamadas à API.
     """
 
-    def __init__(self, access_token: str, account_id: str):
-        self.client = MetaAdsClient(access_token, account_id)
+    def __init__(self, access_token: str, account_id: str, proxy_url: str | None = None):
+        self.client = MetaAdsClient(access_token, account_id, proxy_url=proxy_url)
         self._account_id = account_id
 
     async def get_campaigns(

@@ -153,14 +153,18 @@ def delete_account(
     db.commit()
 
 
-async def _fetch_account_name(access_token: str, account_id: str) -> str | None:
+async def _fetch_account_name(
+    access_token: str, account_id: str, proxy_url: str | None = None,
+) -> str | None:
     """Busca o nome real da conta de anúncio na Graph API."""
+    from integrations.meta_ads.http_factory import create_http_client
+
     act_id = account_id if account_id.startswith("act_") else f"act_{account_id}"
     url = f"{GRAPH_API_BASE}/{act_id}"
     params = {"access_token": access_token, "fields": "name"}
 
     try:
-        async with httpx.AsyncClient(timeout=10.0) as client:
+        async with create_http_client(timeout=10.0, proxy_url=proxy_url) as client:
             resp = await client.get(url, params=params)
             if resp.status_code == 200:
                 name = resp.json().get("name", "")

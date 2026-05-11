@@ -113,6 +113,39 @@ export async function syncFacebookAccounts(
   });
 }
 
+// ─── Proxy ───────────────────────────────────────────────────────────
+
+export interface ProxySettingsAPI {
+  id: number;
+  proxy_url: string;
+  proxy_type: string;
+  enabled: boolean;
+}
+
+export async function fetchProxy(): Promise<ProxySettingsAPI | null> {
+  return apiRequest<ProxySettingsAPI | null>("/facebook/proxy");
+}
+
+export async function saveProxy(proxyUrl: string, proxyType: string): Promise<ProxySettingsAPI> {
+  return apiRequest<ProxySettingsAPI>("/facebook/proxy", {
+    method: "POST",
+    body: { proxy_url: proxyUrl, proxy_type: proxyType },
+  });
+}
+
+export async function deleteProxy(): Promise<void> {
+  await apiRequest("/facebook/proxy", { method: "DELETE" });
+}
+
+export async function testProxy(
+  proxyUrl: string, proxyType: string,
+): Promise<{ success: boolean; message: string }> {
+  return apiRequest<{ success: boolean; message: string }>("/facebook/proxy/test", {
+    method: "POST",
+    body: { proxy_url: proxyUrl, proxy_type: proxyType },
+  });
+}
+
 // ─── Platforms (Webhooks) ────────────────────────────────────────────
 
 export interface WebhookEndpointAPI {
@@ -238,3 +271,52 @@ export interface AiTrainingLevel {
 export async function fetchAiTrainingLevel(): Promise<AiTrainingLevel> {
   return apiRequest<AiTrainingLevel>("/ai/training-level");
 }
+
+// ─── AI Activities ────────────────────────────────────────────────────
+
+export interface AiActivity {
+  id: number;
+  entity_id: string;
+  entity_type: string;
+  entity_type_label: string;
+  entity_name: string;
+  action_type: string;
+  action_label: string;
+  budget_before: number | null;
+  budget_after: number | null;
+  spend: number;
+  revenue: number;
+  profit: number;
+  sales: number;
+  roas: number;
+  cpa: number;
+  cpc: number;
+  ctr: number;
+  clicks: number;
+  impressions: number;
+  connect_rate: number;
+  created_at: string | null;
+}
+
+export interface AiActivitiesPage {
+  total: number;
+  page: number;
+  per_page: number;
+  pages: number;
+  items: AiActivity[];
+}
+
+export async function fetchAiActivities(params: {
+  page?: number;
+  per_page?: number;
+  action_type?: string;
+  entity_type?: string;
+}): Promise<AiActivitiesPage> {
+  const qs = new URLSearchParams();
+  if (params.page)        qs.set("page",        String(params.page));
+  if (params.per_page)    qs.set("per_page",     String(params.per_page));
+  if (params.action_type) qs.set("action_type",  params.action_type);
+  if (params.entity_type) qs.set("entity_type",  params.entity_type);
+  return apiRequest<AiActivitiesPage>(`/ai/activities?${qs.toString()}`);
+}
+

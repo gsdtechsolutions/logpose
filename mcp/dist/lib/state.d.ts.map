@@ -1,0 +1,1 @@
+{"version":3,"file":"state.d.ts","sourceRoot":"","sources":["../../src/lib/state.ts"],"names":[],"mappings":"AAAA,eAAO,IAAI,MAAM,EAAE,MAAM,GAAG,SAAS,CAAC;AACtC,eAAO,IAAI,OAAO,EAAE,MAAW,CAAC;AAEhC,wBAAgB,SAAS,CAAC,GAAG,EAAE,MAAM,QAEpC;AAED,wBAAgB,UAAU,CAAC,GAAG,EAAE,MAAM,QAGrC;AAED,wBAAgB,SAAS,IAAI,MAAM,CAQlC;AAED,wBAAgB,UAAU,IAAI,MAAM,CAQnC"}

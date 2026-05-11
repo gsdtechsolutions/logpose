@@ -1,12 +1,14 @@
 """
 HTTP client para a Meta Marketing API (Graph API).
-Inclui retry com backoff para rate limits e paginação automática.
+Inclui retry com backoff para rate limits, paginação automática e proxy.
+Usado apenas para operações de LEITURA (GET).
 """
 import os
 import asyncio
 import logging
 import httpx
 from typing import Any
+from integrations.meta_ads.http_factory import create_http_client
 
 logger = logging.getLogger(__name__)
 
@@ -41,20 +43,31 @@ DEFAULT_TIMEOUT = 30.0
 MAX_RETRIES = 3
 INITIAL_BACKOFF = 2  # segundos
 
+# Delay entre páginas de paginação (evitar rate limit)
+PAGE_DELAY = 0.3  # 300ms
+
 
 class MetaAdsClient:
     """
     HTTP client para a Meta Marketing API (Graph API).
     Usa httpx.AsyncClient com retry automático para rate limits.
+    Suporta proxy HTTP e SOCKS5.
     """
 
-    def __init__(self, access_token: str, account_id: str):
+    def __init__(
+        self,
+        access_token: str,
+        account_id: str,
+        proxy_url: str | None = None,
+    ):
         self.access_token = access_token
         self.account_id = (
             account_id if account_id.startswith("act_")
             else f"act_{account_id}"
         )
-        self._client = httpx.AsyncClient(timeout=DEFAULT_TIMEOUT)
+        self._client = create_http_client(
+            timeout=DEFAULT_TIMEOUT, proxy_url=proxy_url,
+        )
 
     async def _request_with_retry(
         self,
@@ -150,6 +163,7 @@ class MetaAdsClient:
         """
         Busca todas as páginas de resultado (paginação automática).
         Usa retry com backoff para rate limits.
+        Delay entre páginas para evitar burst.
         """
         all_data: list[dict[str, Any]] = []
         url = f"{GRAPH_API_BASE}/{endpoint}"
@@ -180,6 +194,10 @@ class MetaAdsClient:
             url = paging.get("next")
             # Na próxima iteração, os params já estão na URL next
             request_params = None
+
+            # Delay entre páginas para evitar rate limit
+            if url:
+                await asyncio.sleep(PAGE_DELAY)
 
         return all_data
 

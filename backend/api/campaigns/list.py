@@ -16,6 +16,7 @@ from api.campaigns.helpers import (
 from api.campaigns.merge import merge_campaigns, merge_ads
 from integrations.meta_ads.service import MetaAdsService
 from integrations.meta_ads.client import MetaAuthError
+from integrations.meta_ads.http_factory import get_proxy_url
 from integrations.vturb.plays_by_utm import fetch_vturb_stats_by_campaign
 
 router = APIRouter(prefix="/campaigns", tags=["campaigns"])
@@ -40,8 +41,9 @@ async def get_campaigns_data(
     if not fb_account:
         return {"campaigns": [], "unidentified": _build_unidentified(db, date_start, date_end)}
 
-    # 2. Buscar dados do Meta Ads
-    service = MetaAdsService(fb_account.access_token, fb_account.account_id)
+    # 2. Buscar dados do Meta Ads (com proxy se configurado)
+    proxy = get_proxy_url(db, fb_account.id)
+    service = MetaAdsService(fb_account.access_token, fb_account.account_id, proxy_url=proxy)
     try:
         meta_campaigns, meta_adsets, meta_ads = await service.get_all_levels(
             date_start, date_end,

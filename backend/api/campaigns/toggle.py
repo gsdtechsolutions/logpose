@@ -12,6 +12,7 @@ from database.models.campaign_action import ActionType
 from api.auth.deps import get_current_user
 from api.campaigns.actions import record_campaign_action
 from integrations.meta_ads.manage import toggle_entity_status
+from integrations.meta_ads.http_factory import get_proxy_url
 
 router = APIRouter(prefix="/campaigns", tags=["campaigns"])
 
@@ -42,12 +43,15 @@ async def toggle_status(
         raise HTTPException(status_code=404, detail="Conta Facebook não encontrada")
 
     new_status = "ACTIVE" if payload.active else "PAUSED"
+    proxy = get_proxy_url(db, fb_account.id)
 
     result = await toggle_entity_status(
         access_token=fb_account.access_token,
         entity_id=payload.entity_id,
         entity_type=payload.entity_type,
         new_status=new_status,
+        account_id=fb_account.account_id,
+        proxy_url=proxy,
     )
 
     if not result["success"]:

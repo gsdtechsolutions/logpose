@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { RiMessageAi3Line } from "@remixicon/react";
 import { fetchAiTrainingLevel, type AiTrainingLevel } from "@/services/integrations";
 import {
@@ -20,6 +21,7 @@ const LEVEL_CONFIG: Record<string, { color: string; glow: string; emoji: string 
 
 export function AiTrainingProfile() {
   const [data, setData] = useState<AiTrainingLevel | null>(null);
+  const navigate = useNavigate();
 
   useEffect(() => {
     fetchAiTrainingLevel()
@@ -35,7 +37,13 @@ export function AiTrainingProfile() {
     <TooltipProvider>
       <Tooltip>
         <TooltipTrigger asChild>
-          <div className="mx-2 mb-2 rounded-xl bg-sidebar-accent/50 border border-sidebar-border p-3 cursor-default">
+          <div
+            role="button"
+            tabIndex={0}
+            onClick={() => navigate("/ai-training")}
+            onKeyDown={(e) => e.key === "Enter" && navigate("/ai-training")}
+            className="mx-2 mb-2 rounded-xl bg-sidebar-accent/50 border border-sidebar-border p-3 cursor-pointer hover:bg-sidebar-accent/80 transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-sidebar-ring"
+          >
             {/* Header */}
             <div className="flex items-center gap-2 mb-2.5">
               <div className={`rounded-lg p-1.5 bg-gradient-to-br ${config.color} shadow-md ${config.glow}`}>
@@ -67,10 +75,9 @@ export function AiTrainingProfile() {
           </div>
         </TooltipTrigger>
         <TooltipContent side="right" className="max-w-[220px] flex flex-col gap-1">
-          <p className="text-xs font-medium">Nível de Treinamento da AI</p>
+          <p className="text-xs font-medium">Ver Treinamento da AI</p>
           <p className="text-[11px] text-muted-foreground leading-relaxed">
-            A AI aprende com suas ações nas campanhas (escalar, pausar, ajustar orçamento). 
-            Quanto mais ela aprende, melhores são as recomendações.
+            Clique para ver as atividades registradas e acompanhar o progresso de treinamento da AI.
           </p>
         </TooltipContent>
       </Tooltip>

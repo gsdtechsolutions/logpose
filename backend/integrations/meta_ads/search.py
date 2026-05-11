@@ -4,10 +4,11 @@ Busca de dados auxiliares na Meta Marketing API:
 - Páginas do Facebook (via Business)
 - Contas Instagram vinculadas
 - Interesses (targeting search)
+Usa http_factory para suporte a proxy.
 """
 import logging
-import httpx
 from integrations.meta_ads.client import MetaAdsClient, GRAPH_API_BASE
+from integrations.meta_ads.http_factory import create_http_client
 
 logger = logging.getLogger(__name__)
 
@@ -21,13 +22,15 @@ async def fetch_pixels(client: MetaAdsClient) -> list[dict]:
     return data.get("data", [])
 
 
-async def _get_business_id(access_token: str, ad_account_id: str) -> str | None:
+async def _get_business_id(
+    access_token: str, ad_account_id: str, proxy_url: str | None = None,
+) -> str | None:
     """Busca o business_id vinculado à conta de anúncio."""
     act_id = ad_account_id if ad_account_id.startswith("act_") else f"act_{ad_account_id}"
     url = f"{GRAPH_API_BASE}/{act_id}"
     params = {"access_token": access_token, "fields": "business"}
 
-    async with httpx.AsyncClient(timeout=15.0) as http:
+    async with create_http_client(timeout=15.0, proxy_url=proxy_url) as http:
         response = await http.get(url, params=params)
         if response.status_code != 200:
             logger.warning(f"Erro ao buscar business: {response.text}")
@@ -40,15 +43,14 @@ async def _get_business_id(access_token: str, ad_account_id: str) -> str | None:
     return biz.get("id") if biz else None
 
 
-async def fetch_pages(access_token: str, ad_account_id: str) -> list[dict]:
-    """
-    Busca páginas do Facebook via Business vinculado à conta.
-    Combina owned_pages + client_pages.
-    """
-    biz_id = await _get_business_id(access_token, ad_account_id)
+async def fetch_pages(
+    access_token: str, ad_account_id: str, proxy_url: str | None = None,
+) -> list[dict]:
+    """Busca páginas do Facebook via Business. Combina owned_pages + client_pages."""
+    biz_id = await _get_business_id(access_token, ad_account_id, proxy_url)
     if not biz_id:
         logger.warning("Business não encontrado, tentando /me/accounts")
-        return await _fetch_pages_me(access_token)
+        return await _fetch_pages_me(access_token, proxy_url)
 
     pages: dict[str, dict] = {}  # dedup por id
 
@@ -59,7 +61,7 @@ async def fetch_pages(access_token: str, ad_account_id: str) -> list[dict]:
             "fields": "id,name,picture{url}",
             "limit": "100",
         }
-        async with httpx.AsyncClient(timeout=15.0) as http:
+        async with create_http_client(timeout=15.0, proxy_url=proxy_url) as http:
             response = await http.get(url, params=params)
             if response.status_code != 200:
                 logger.warning(f"Erro {edge}: {response.text}")
@@ -72,7 +74,9 @@ async def fetch_pages(access_token: str, ad_account_id: str) -> list[dict]:
     return list(pages.values())
 
 
-async def _fetch_pages_me(access_token: str) -> list[dict]:
+async def _fetch_pages_me(
+    access_token: str, proxy_url: str | None = None,
+) -> list[dict]:
     """Fallback: busca páginas via /me/accounts."""
     url = f"{GRAPH_API_BASE}/me/accounts"
     params = {
@@ -80,7 +84,7 @@ async def _fetch_pages_me(access_token: str) -> list[dict]:
         "fields": "id,name,picture{url}",
         "limit": "100",
     }
-    async with httpx.AsyncClient(timeout=15.0) as http:
+    async with create_http_client(timeout=15.0, proxy_url=proxy_url) as http:
         response = await http.get(url, params=params)
         if response.status_code != 200:
             logger.warning(f"Erro em /me/accounts: {response.text}")
@@ -93,6 +97,7 @@ async def _fetch_pages_me(access_token: str) -> list[dict]:
 async def fetch_instagram_accounts(
     access_token: str,
     ad_account_id: str,
+    proxy_url: str | None = None,
 ) -> list[dict]:
     """Busca contas Instagram vinculadas à conta de anúncio via Ads API."""
     act_id = ad_account_id if ad_account_id.startswith("act_") else f"act_{ad_account_id}"
@@ -102,7 +107,7 @@ async def fetch_instagram_accounts(
         "fields": "id,username,profile_picture_url",
         "limit": "100",
     }
-    async with httpx.AsyncClient(timeout=15.0) as http:
+    async with create_http_client(timeout=15.0, proxy_url=proxy_url) as http:
         response = await http.get(url, params=params)
         if response.status_code != 200:
             logger.warning(f"Erro IG ad account {act_id}: {response.text}")
@@ -125,6 +130,7 @@ async def search_interests(
     access_token: str,
     query: str,
     locale: str = "pt_BR",
+    proxy_url: str | None = None,
 ) -> list[dict]:
     """Busca interesses para targeting via /search."""
     url = f"{GRAPH_API_BASE}/search"
@@ -135,7 +141,7 @@ async def search_interests(
         "locale": locale,
         "limit": "50",
     }
-    async with httpx.AsyncClient(timeout=15.0) as http:
+    async with create_http_client(timeout=15.0, proxy_url=proxy_url) as http:
         response = await http.get(url, params=params)
         if response.status_code != 200:
             logger.warning(f"Interest search error: {response.text}")

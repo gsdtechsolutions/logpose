@@ -35,6 +35,7 @@ const INITIAL_STATE: CampaignFormState = {
   country: DEFAULT_COUNTRY,
   locales: [...DEFAULT_LOCALES],
   interests: [],
+  advantageAudience: true,
   pageId: "",
   pageLabel: "",
   instagramActorId: "",

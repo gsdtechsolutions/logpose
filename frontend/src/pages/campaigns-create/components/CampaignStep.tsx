@@ -1,6 +1,7 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Switch } from "@/components/ui/switch";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import type { CampaignFormState } from "../hooks/useCampaignForm";
 import {
@@ -148,6 +149,41 @@ export function CampaignStep({ form, onUpdate }: CampaignStepProps) {
             </p>
           </div>
         )}
+
+        {/* Advantage+ Audience */}
+        <div className="flex items-center justify-between rounded-lg border p-4">
+          <div className="space-y-0.5">
+            <div className="flex items-center gap-2">
+              <Label className="text-sm font-medium cursor-pointer" htmlFor="advantage-audience-toggle">
+                Advantage+ Audience
+              </Label>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <button className="p-0.5 rounded-full opacity-50 hover:opacity-100 transition-opacity">
+                    <RiQuestionLine className="size-3.5" />
+                  </button>
+                </TooltipTrigger>
+                <TooltipContent side="top" className="flex flex-col max-w-xs text-left">
+                  <span className="font-medium mb-1">Advantage+ Audience (Meta)</span>
+                  <span>
+                    Quando ativado, a Meta expande automaticamente o público além dos critérios
+                    definidos para encontrar mais conversões. Desative para targeting manual estrito.
+                  </span>
+                </TooltipContent>
+              </Tooltip>
+            </div>
+            <p className="text-xs text-muted-foreground">
+              {form.advantageAudience
+                ? "Ativado — Meta expande o público automaticamente."
+                : "Desativado — Targeting manual estrito."}
+            </p>
+          </div>
+          <Switch
+            id="advantage-audience-toggle"
+            checked={form.advantageAudience}
+            onCheckedChange={(checked) => onUpdate("advantageAudience", checked)}
+          />
+        </div>
       </CardContent>
     </Card>
   );

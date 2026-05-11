@@ -31,6 +31,11 @@ const SECTIONS = [
       'Encontre "Marketing API" e clique em "Configurar"',
       'Na seção "Marketing API", clique em "Ferramentas" (no sub-menu)',
       'Anote: você está agora na tela de geração de tokens',
+      'Agora vá em "Configurações" → "Básico" no menu lateral esquerdo do app',
+      'Preencha os campos obrigatórios: URL da Política de Privacidade, URL dos Termos de Serviço, Ícone do app e categoria',
+      'Role até o final da página e clique em "Salvar alterações"',
+      'No topo da página, localize o interruptor de modo "Em desenvolvimento" e clique para alternar para "Publicado" (modo Produção)',
+      'Confirme a publicação no modal que aparecer — isso é necessário para que o token funcione sem restrições na API',
     ],
   },
   {

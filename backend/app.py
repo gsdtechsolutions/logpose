@@ -21,6 +21,7 @@ from api.company.dashboard import router as company_dash_router
 from api.vturb.accounts import router as vturb_router
 from api.facebook.accounts import router as facebook_router
 from api.facebook.discover import router as facebook_discover_router
+from api.facebook.proxy import router as facebook_proxy_router
 from api.platforms.webhooks import router as platforms_router
 from api.products.crud import router as products_router
 from api.products.items import router as product_items_router
@@ -56,6 +57,7 @@ from api.gemini.models import router as gemini_models_router
 from api.gemini.chat import router as gemini_chat_router
 from api.gemini.daily_report import router as gemini_daily_report_router
 from api.ai.training_level import router as ai_training_router
+from api.ai.activities import router as ai_activities_router
 from api.campaigns_create.fetch_data import router as campaign_create_fetch_router
 from api.campaigns_create.create import router as campaign_create_router
 from api.campaigns_create.export_import import router as campaign_create_export_router
@@ -66,6 +68,11 @@ from api.stripe.accounts import router as stripe_accounts_router
 from api.subscriptions.metrics import router as subscriptions_metrics_router
 from api.advanced_settings.features import router as advanced_settings_router
 from api.advanced_settings.reset_sales import router as reset_sales_router
+from api.mcp.api_key import router as mcp_api_key_router
+from api.mcp.ext_dashboard import router as ext_dashboard_router
+from api.mcp.ext_campaigns import router as ext_campaigns_router
+from api.mcp.ext_data import router as ext_data_router
+from api.mcp.ext_database import router as ext_database_router
 
 from database.core.migrate_sql import run_sql_migrations
 
@@ -99,6 +106,7 @@ app.include_router(profile_router, prefix="/api")
 app.include_router(vturb_router, prefix="/api")
 app.include_router(facebook_router, prefix="/api")
 app.include_router(facebook_discover_router, prefix="/api")
+app.include_router(facebook_proxy_router, prefix="/api")
 app.include_router(platforms_router, prefix="/api")
 app.include_router(products_router, prefix="/api")
 app.include_router(product_items_router, prefix="/api")
@@ -134,6 +142,7 @@ app.include_router(gemini_models_router, prefix="/api")
 app.include_router(gemini_chat_router, prefix="/api")
 app.include_router(gemini_daily_report_router, prefix="/api")
 app.include_router(ai_training_router, prefix="/api")
+app.include_router(ai_activities_router, prefix="/api")
 app.include_router(campaign_create_fetch_router, prefix="/api")
 app.include_router(campaign_create_router, prefix="/api")
 app.include_router(campaign_create_export_router, prefix="/api")
@@ -144,6 +153,11 @@ app.include_router(stripe_accounts_router, prefix="/api")
 app.include_router(subscriptions_metrics_router, prefix="/api")
 app.include_router(advanced_settings_router, prefix="/api")
 app.include_router(reset_sales_router, prefix="/api")
+app.include_router(mcp_api_key_router, prefix="/api")
+app.include_router(ext_dashboard_router, prefix="/api")
+app.include_router(ext_campaigns_router, prefix="/api")
+app.include_router(ext_data_router, prefix="/api")
+app.include_router(ext_database_router, prefix="/api")
 
 # SPA Middleware (serves frontend in production)
 _frontend_dir = os.path.join(os.path.dirname(__file__), "frontend_dist")

@@ -73,6 +73,7 @@ export interface CampaignFormState {
   country: string;
   locales: number[];
   interests: InterestData[];
+  advantageAudience: boolean;
   pageId: string;
   pageLabel: string;
   instagramActorId: string;

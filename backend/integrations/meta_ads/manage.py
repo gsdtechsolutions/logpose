@@ -1,12 +1,16 @@
 """
-Funções de gerenciamento do Meta Ads via Graph API.
+Funções de gerenciamento do Meta Ads via Facebook Business SDK oficial.
 - Toggle status (ACTIVE/PAUSED) de campanhas, adsets e ads
 - Update budget (daily_budget) de campanhas e adsets
 """
+import asyncio
 import logging
-from integrations.meta_ads.client import GRAPH_API_BASE
+from integrations.meta_ads.sdk_client import MetaSdkClient
+from integrations.meta_ads.client import INITIAL_BACKOFF
 
 logger = logging.getLogger(__name__)
+
+MAX_RETRIES = 3
 
 
 async def toggle_entity_status(
@@ -14,17 +18,21 @@ async def toggle_entity_status(
     entity_id: str,
     entity_type: str,
     new_status: str,
+    account_id: str = "0",
+    proxy_url: str | None = None,
 ) -> dict:
     """
-    Altera o status de uma entidade (campaign, adset, ad).
+    Altera o status de uma entidade (campaign, adset, ad) via SDK.
     new_status: 'ACTIVE' ou 'PAUSED'
-    Usa retry com backoff para rate limits.
     """
-    return await _post_with_retry(
+    return await _execute_with_retry(
         access_token=access_token,
+        account_id=account_id,
         entity_id=entity_id,
+        entity_type=entity_type,
         params={"status": new_status},
-        action_label=f"Toggle {entity_type} {entity_id}",
+        proxy_url=proxy_url,
+        label=f"Toggle {entity_type} {entity_id}",
     )
 
 
@@ -33,90 +41,55 @@ async def update_budget(
     entity_id: str,
     entity_type: str,
     daily_budget_reais: float,
+    account_id: str = "0",
+    proxy_url: str | None = None,
 ) -> dict:
-    """
-    Atualiza o orçamento diário de uma campanha (CBO) ou adset (ABO).
-    Meta API espera o valor em centavos (int).
-    """
+    """Atualiza o orçamento diário. Meta API espera valor em centavos."""
     budget_cents = int(daily_budget_reais * 100)
 
-    return await _post_with_retry(
+    return await _execute_with_retry(
         access_token=access_token,
+        account_id=account_id,
         entity_id=entity_id,
+        entity_type=entity_type,
         params={"daily_budget": str(budget_cents)},
-        action_label=f"Budget {entity_type} {entity_id}",
+        proxy_url=proxy_url,
+        label=f"Budget {entity_type} {entity_id}",
     )
 
 
-async def _post_with_retry(
+async def _execute_with_retry(
     access_token: str,
+    account_id: str,
     entity_id: str,
+    entity_type: str,
     params: dict,
-    action_label: str,
-    max_retries: int = 3,
+    proxy_url: str | None,
+    label: str,
 ) -> dict:
-    """
-    POST na Graph API com retry para rate limit.
-    Parseia erro da Meta API para mensagem amigável.
-    """
-    import asyncio
-    import httpx
-    from integrations.meta_ads.client import DEFAULT_TIMEOUT, INITIAL_BACKOFF
+    """Executa update via SDK com retry simples para rate limit."""
+    sdk = MetaSdkClient(access_token, account_id, proxy_url=proxy_url)
 
-    url = f"{GRAPH_API_BASE}/{entity_id}"
-    post_data = {"access_token": access_token, **params}
+    for attempt in range(MAX_RETRIES):
+        result = await sdk.update_entity(entity_id, entity_type, params)
 
-    async with httpx.AsyncClient(timeout=DEFAULT_TIMEOUT) as http:
-        for attempt in range(max_retries):
-            response = await http.post(url, data=post_data)
+        if result["success"]:
+            return result
 
-            # Sucesso
-            if response.status_code == 200:
-                return {"success": True}
+        # Verifica se é rate limit (mensagem padrão da Meta)
+        error_msg = result.get("error", "")
+        is_rate_limit = any(
+            kw in error_msg.lower()
+            for kw in ["rate limit", "too many calls", "please reduce"]
+        )
 
-            # Parsear erro da Meta
-            error_data = _parse_meta_error(response)
+        if is_rate_limit and attempt < MAX_RETRIES - 1:
+            wait = INITIAL_BACKOFF * (2 ** attempt)
+            logger.warning(f"{label}: Rate limit (tentativa {attempt+1}). Aguardando {wait}s")
+            await asyncio.sleep(wait)
+            continue
 
-            # Rate limit -> retry com backoff
-            if error_data["is_rate_limit"]:
-                wait_time = INITIAL_BACKOFF * (2 ** attempt)
-                logger.warning(
-                    f"{action_label}: Rate limit (tentativa "
-                    f"{attempt + 1}/{max_retries}). Aguardando {wait_time}s"
-                )
-                await asyncio.sleep(wait_time)
-                continue
+        logger.error(f"{label}: {error_msg}")
+        return result
 
-            # Outro erro -> retorna imediatamente
-            logger.error(f"{action_label}: {error_data['message']}")
-            return {"success": False, "error": error_data["message"]}
-
-    # Todas as tentativas esgotadas
-    logger.error(f"{action_label}: Rate limit persistente após {max_retries} tentativas")
-    return {"success": False, "error": "Rate limit da Meta API. Tente novamente em alguns minutos."}
-
-
-def _parse_meta_error(response) -> dict:
-    """Parseia erro da Meta API para extrair mensagem e tipo."""
-    try:
-        body = response.json()
-        error = body.get("error", {})
-        code = error.get("code", 0)
-        message = error.get("message", "")
-        error_subcode = error.get("error_subcode", 0)
-
-        is_rate_limit = code in (17, 32, 4) or response.status_code == 429
-
-        return {
-            "message": message or f"Erro {response.status_code} da Meta API",
-            "code": code,
-            "subcode": error_subcode,
-            "is_rate_limit": is_rate_limit,
-        }
-    except Exception:
-        return {
-            "message": f"Erro {response.status_code} da Meta API (resposta não parseável)",
-            "code": 0,
-            "subcode": 0,
-            "is_rate_limit": response.status_code == 429,
-        }
+    return {"success": False, "error": "Rate limit persistente após retries"}

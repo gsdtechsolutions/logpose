@@ -101,7 +101,7 @@ async def test_proxy(
 
     try:
         async with create_http_client(
-            timeout=10.0, proxy_url=url,
+            timeout=30.0, proxy_url=url,
         ) as client:
             resp = await client.get("https://graph.facebook.com/v25.0/me")
             return {

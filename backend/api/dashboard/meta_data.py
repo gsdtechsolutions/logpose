@@ -11,6 +11,7 @@ from database.models.facebook_account import FacebookAccount
 from integrations.meta_ads.service import MetaAdsService
 from integrations.meta_ads.client import MetaAuthError
 from integrations.meta_ads.schemas import AccountInsightsSummary, CampaignInsights
+from integrations.meta_ads.proxy import get_proxy_url
 from database.models.facebook_cache import FacebookAdsCache
 
 logger = logging.getLogger(__name__)
@@ -78,7 +79,8 @@ async def fetch_meta_account_summary(
                 continue
 
         # Fallback on-demand se for custom ou cache não existir
-        service = MetaAdsService(fb.access_token, fb.account_id)
+        proxy = get_proxy_url(db, fb.id)
+        service = MetaAdsService(fb.access_token, fb.account_id, proxy_url=proxy)
         try:
             s = await service.get_account_summary(date_start, date_end)
             if s:
@@ -121,7 +123,8 @@ async def fetch_meta_campaigns_for_dashboard(
                 all_campaigns.extend([CampaignInsights(**c) for c in cache.campaigns_data])
                 continue
 
-        service = MetaAdsService(fb.access_token, fb.account_id)
+        proxy = get_proxy_url(db, fb.id)
+        service = MetaAdsService(fb.access_token, fb.account_id, proxy_url=proxy)
         try:
             campaigns = await service.get_campaigns(date_start, date_end)
             all_campaigns.extend(campaigns)

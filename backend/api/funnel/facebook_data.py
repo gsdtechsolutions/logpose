@@ -1,6 +1,7 @@
 import logging
 from sqlalchemy.orm import Session
 from integrations.meta_ads.service import MetaAdsService
+from integrations.meta_ads.proxy import get_proxy_url
 from database.models.facebook_account import FacebookAccount
 from database.models.facebook_cache import FacebookAdsCache
 
@@ -67,7 +68,8 @@ async def fetch_facebook_aggregated(
                             used_cache = True
 
             if not used_cache:
-                service = MetaAdsService(account.access_token, account.account_id)
+                proxy = get_proxy_url(db, account.id)
+                service = MetaAdsService(account.access_token, account.account_id, proxy_url=proxy)
                 if campaign_ids:
                     metrics = await _fetch_filtered_by_campaigns(
                         service, date_start, date_end, campaign_ids,

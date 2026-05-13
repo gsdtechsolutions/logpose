@@ -110,10 +110,11 @@ async def test_proxy(
                 "message": "Proxy conectou com sucesso à Meta API",
             }
     except Exception as e:
-        logger.warning(f"Teste de proxy falhou: {e}")
+        error_details = f"{type(e).__name__}: {str(e)}" if str(e) else repr(e)
+        logger.warning(f"Teste de proxy falhou: {error_details}")
         return {
             "success": False,
-            "message": f"Falha na conexão: {str(e)}",
+            "message": f"Falha na conexão: {error_details}",
         }
 
 

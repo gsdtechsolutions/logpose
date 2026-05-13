@@ -8,6 +8,7 @@ services:
       - DATABASE_URL=postgresql://postgres:${DB_PASSWORD}@db:5432/logpose
       - SECRET_KEY=${SECRET_KEY}
       - META_GRAPH_API_VERSION=v25.0
+      - REDIS_URL=redis://redis:6379/0
     networks:
       - traefik
       - internal

@@ -84,11 +84,9 @@ class MetaAdsService:
         Usa cache individual para cada nível.
         Reduz tempo total de resposta significativamente.
         """
-        campaigns, adsets, ads = await asyncio.gather(
-            self.get_campaigns(date_start, date_end),
-            self.get_adsets(date_start, date_end),
-            self.get_ads(date_start, date_end),
-        )
+        campaigns = await self.get_campaigns(date_start, date_end)
+        adsets = await self.get_adsets(date_start, date_end)
+        ads = await self.get_ads(date_start, date_end)
         return campaigns, adsets, ads
 
     async def get_account_summary(

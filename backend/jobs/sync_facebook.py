@@ -10,6 +10,7 @@ from database.core.timezone import now_sp
 from database.models.facebook_account import FacebookAccount
 from database.models.facebook_cache import FacebookAdsCache
 from integrations.meta_ads.service import MetaAdsService
+from integrations.meta_ads.client import MetaAccountBlockedError
 from integrations.meta_ads.http_factory import get_proxy_url
 
 logger = logging.getLogger(__name__)
@@ -88,11 +89,17 @@ async def async_sync_all_accounts():
                         cache_entry.summary_data = summary_data
                         db.commit()
 
+                    except MetaAccountBlockedError as e:
+                        logger.error(f"Conta bloqueada/restrita: {account.account_id}. Parando sync para esta conta.")
+                        break
                     except Exception as e:
                         logger.error(f"Erro ao fazer sync do preset {preset} para a conta {account.account_id}: {e}")
 
-                # Delay entre as contas para garantir segurança (rate limit)
-                await asyncio.sleep(5)
+                    # Delay pequeno entre os presets para evitar bloqueio da conta
+                    await asyncio.sleep(1)
+
+                # Delay entre as contas
+                await asyncio.sleep(2)
 
             finally:
                 await service.close()

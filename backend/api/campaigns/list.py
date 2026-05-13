@@ -71,6 +71,7 @@ async def get_campaigns_data(
             ).first()
             
             if cache and cache.campaigns_data is not None:
+                print(f"✅ [CACHE] Dados obtidos do Banco de Dados para a conta {fb_account.account_id} (Preset: {preset})", flush=True)
                 meta_campaigns.extend([CampaignInsights(**c) for c in cache.campaigns_data])
                 meta_adsets.extend([AdSetInsights(**c) for c in cache.adsets_data])
                 meta_ads.extend([AdInsights(**c) for c in cache.ads_data])
@@ -82,6 +83,7 @@ async def get_campaigns_data(
             proxy = get_proxy_url(db, fb_account.id)
             service = MetaAdsService(fb_account.access_token, fb_account.account_id, proxy_url=proxy)
             try:
+                print(f"🔥 [LIVE] Dados obtidos AO VIVO da Meta (On-Demand) para a conta {fb_account.account_id}", flush=True)
                 c, ad, a = await service.get_all_levels(date_start, date_end)
                 meta_campaigns.extend(c)
                 meta_adsets.extend(ad)

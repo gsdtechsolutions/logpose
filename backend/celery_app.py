@@ -19,10 +19,10 @@ celery_app.conf.update(
     enable_utc=False,
 )
 
-# Configura o cron para rodar a cada 10 minutos
+# Configura o cron para rodar a cada 15 minutos
 celery_app.conf.beat_schedule = {
-    "sync-facebook-ads-every-10-mins": {
+    "sync-facebook-ads-every-15-mins": {
         "task": "jobs.sync_facebook.sync_all_facebook_accounts",
-        "schedule": crontab(minute="*/10"),
+        "schedule": crontab(minute="*/15"),
     },
 }

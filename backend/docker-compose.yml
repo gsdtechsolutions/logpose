@@ -45,7 +45,7 @@ services:
     build:
       context: ..
       dockerfile: Dockerfile
-    command: celery -A celery_app worker --beat -l warning
+    command: celery -A celery_app worker --beat -l info
     depends_on:
       db:
         condition: service_healthy

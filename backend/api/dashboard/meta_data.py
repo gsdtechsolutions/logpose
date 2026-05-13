@@ -68,6 +68,7 @@ async def fetch_meta_account_summary(
                 FacebookAdsCache.date_preset == preset
             ).first()
             if cache and cache.summary_data is not None:
+                print(f"✅ [CACHE] Account Summary obtido do Banco de Dados para a conta {fb.account_id} (Preset: {preset})", flush=True)
                 # Ensure we handle empty dictionaries properly by not throwing an error if it's completely empty
                 s_data = cache.summary_data if cache.summary_data else {}
                 s = AccountInsightsSummary(**s_data)
@@ -82,6 +83,7 @@ async def fetch_meta_account_summary(
         proxy = get_proxy_url(db, fb.id)
         service = MetaAdsService(fb.access_token, fb.account_id, proxy_url=proxy)
         try:
+            print(f"🔥 [LIVE] Account Summary obtido AO VIVO da Meta para a conta {fb.account_id}", flush=True)
             s = await service.get_account_summary(date_start, date_end)
             if s:
                 total_summary.spend += s.spend
@@ -120,12 +122,14 @@ async def fetch_meta_campaigns_for_dashboard(
                 FacebookAdsCache.date_preset == preset
             ).first()
             if cache and cache.campaigns_data is not None:
+                print(f"✅ [CACHE] Campanhas do Dashboard obtidas do Banco de Dados para a conta {fb.account_id} (Preset: {preset})", flush=True)
                 all_campaigns.extend([CampaignInsights(**c) for c in cache.campaigns_data])
                 continue
 
         proxy = get_proxy_url(db, fb.id)
         service = MetaAdsService(fb.access_token, fb.account_id, proxy_url=proxy)
         try:
+            print(f"🔥 [LIVE] Campanhas do Dashboard obtidas AO VIVO da Meta para a conta {fb.account_id}", flush=True)
             campaigns = await service.get_campaigns(date_start, date_end)
             all_campaigns.extend(campaigns)
         except MetaAuthError:

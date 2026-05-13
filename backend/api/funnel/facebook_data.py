@@ -40,6 +40,7 @@ async def fetch_facebook_aggregated(
                 if cache:
                     if campaign_ids:
                         if cache.campaigns_data is not None:
+                            print(f"✅ [CACHE] Funil obtido do Banco de Dados para a conta {account.account_id} (Filtrado)", flush=True)
                             metrics = {
                                 "reach": 0, "impressions": 0, "clicks": 0,
                                 "lpv": 0, "checkout": 0, "spend": 0.0,
@@ -56,6 +57,7 @@ async def fetch_facebook_aggregated(
                             used_cache = True
                     else:
                         if cache.summary_data is not None:
+                            print(f"✅ [CACHE] Funil obtido do Banco de Dados para a conta {account.account_id} (Geral)", flush=True)
                             s = cache.summary_data if cache.summary_data else {}
                             metrics = {
                                 "reach": s.get("impressions", 0),
@@ -68,6 +70,7 @@ async def fetch_facebook_aggregated(
                             used_cache = True
 
             if not used_cache:
+                print(f"🔥 [LIVE] Funil obtido AO VIVO da Meta para a conta {account.account_id}", flush=True)
                 proxy = get_proxy_url(db, account.id)
                 service = MetaAdsService(account.access_token, account.account_id, proxy_url=proxy)
                 if campaign_ids:

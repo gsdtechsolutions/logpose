@@ -1,7 +1,7 @@
 import logging
 from sqlalchemy.orm import Session
 from integrations.meta_ads.service import MetaAdsService
-from integrations.meta_ads.proxy import get_proxy_url
+from integrations.meta_ads.http_factory import get_proxy_url
 from database.models.facebook_account import FacebookAccount
 from database.models.facebook_cache import FacebookAdsCache
 

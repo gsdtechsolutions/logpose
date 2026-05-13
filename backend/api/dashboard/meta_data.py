@@ -11,7 +11,7 @@ from database.models.facebook_account import FacebookAccount
 from integrations.meta_ads.service import MetaAdsService
 from integrations.meta_ads.client import MetaAuthError
 from integrations.meta_ads.schemas import AccountInsightsSummary, CampaignInsights
-from integrations.meta_ads.proxy import get_proxy_url
+from integrations.meta_ads.http_factory import get_proxy_url
 from database.models.facebook_cache import FacebookAdsCache
 
 logger = logging.getLogger(__name__)

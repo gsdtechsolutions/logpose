@@ -64,7 +64,7 @@ export default function CampaignsPage() {
   const [dateEnd, setDateEnd] = useState(defaultDR.end);
 
   const {
-    campaigns, unidentified, metaError, isLoading, error,
+    campaigns, unidentified, metaError, lastSyncAt, isLoading, error,
     accounts: fbAccounts, activeAccountId, setSelectedAccountId,
     toggle, changeBudget, silentReload,
   } = useCampaigns(dateStart, dateEnd);
@@ -206,6 +206,7 @@ export default function CampaignsPage() {
         onRefresh={handleRefresh}
         onOpenSettings={() => setSettingsOpen(true)}
         defaultPresetIds={DEFAULT_PRESET_IDS}
+        lastSyncAt={lastSyncAt}
       />
       <CampaignsKpis data={metricsForKpi} />
       <div className="flex flex-wrap items-center gap-2">

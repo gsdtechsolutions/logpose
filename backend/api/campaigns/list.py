@@ -8,7 +8,10 @@ from typing import Optional
 
 from database.core.connection import get_db
 from database.models.facebook_account import FacebookAccount
+from database.models.facebook_cache import FacebookAdsCache
 from database.models.transaction import Transaction, TransactionStatus
+from database.core.timezone import now_sp
+from datetime import timedelta
 from api.auth.deps import get_current_user
 from api.campaigns.helpers import (
     parse_utm_campaign, parse_utm_medium, parse_utm_content, safe_division,
@@ -36,41 +39,64 @@ async def get_campaigns_data(
     Cruza campanhas com vendas pelo utm_campaign (name|id).
     Retorna hierarquia: campaigns -> adsets -> ads, cada um com métricas.
     """
-    # 1. Selecionar conta Facebook
-    fb_account = _get_fb_account(db, account_id)
-    if not fb_account:
+    # 1. Selecionar conta(s) Facebook
+    fb_accounts = []
+    if account_id:
+        acc = db.query(FacebookAccount).filter(FacebookAccount.id == account_id, FacebookAccount.token_valid.is_(True)).first()
+        if acc: fb_accounts.append(acc)
+    else:
+        fb_accounts = db.query(FacebookAccount).filter(FacebookAccount.token_valid.is_(True)).all()
+
+    if not fb_accounts:
         return {"campaigns": [], "unidentified": _build_unidentified(db, date_start, date_end)}
 
-    # 2. Buscar dados do Meta Ads (com proxy se configurado)
-    proxy = get_proxy_url(db, fb_account.id)
-    service = MetaAdsService(fb_account.access_token, fb_account.account_id, proxy_url=proxy)
-    try:
-        meta_campaigns, meta_adsets, meta_ads = await service.get_all_levels(
-            date_start, date_end,
-        )
-    except MetaAuthError:
-        # Token inválido: marcar no banco para suprimir futuras chamadas
-        fb_account.token_valid = False
-        db.commit()
-        await service.close()
-        return {
-            "campaigns": [],
-            "unidentified": _build_unidentified(db, date_start, date_end),
-            "error": "token_invalid",
-        }
-    except Exception as e:
-        import logging
-        logging.getLogger(__name__).error(f"Erro ao buscar dados do Meta Ads: {e}")
-        await service.close()
-        return {
-            "campaigns": [],
-            "unidentified": _build_unidentified(db, date_start, date_end),
-            "error": str(e),
-        }
-    finally:
-        await service.close()
+    # 2. Identificar se é um preset conhecido
+    preset = _identify_preset(date_start, date_end)
 
-    # 3. Buscar transações aprovadas no período com utm_source=FB
+    # 3. Buscar dados da Meta Ads (Cache Local ou On-Demand) para cada conta
+    meta_campaigns, meta_adsets, meta_ads = [], [], []
+    last_sync_at = None
+    import logging
+    logger = logging.getLogger(__name__)
+
+    from integrations.meta_ads.schemas import CampaignInsights, AdSetInsights, AdInsights
+
+    for fb_account in fb_accounts:
+        used_cache = False
+
+        if preset:
+            cache = db.query(FacebookAdsCache).filter(
+                FacebookAdsCache.account_id == fb_account.account_id,
+                FacebookAdsCache.date_preset == preset
+            ).first()
+            
+            if cache and cache.campaigns_data is not None:
+                meta_campaigns.extend([CampaignInsights(**c) for c in cache.campaigns_data])
+                meta_adsets.extend([AdSetInsights(**c) for c in cache.adsets_data])
+                meta_ads.extend([AdInsights(**c) for c in cache.ads_data])
+                used_cache = True
+                if cache.updated_at:
+                    last_sync_at = cache.updated_at.isoformat()
+
+        if not used_cache:
+            proxy = get_proxy_url(db, fb_account.id)
+            service = MetaAdsService(fb_account.access_token, fb_account.account_id, proxy_url=proxy)
+            try:
+                c, ad, a = await service.get_all_levels(date_start, date_end)
+                meta_campaigns.extend(c)
+                meta_adsets.extend(ad)
+                meta_ads.extend(a)
+            except MetaAuthError:
+                # Token inválido: marcar no banco para suprimir futuras chamadas
+                fb_account.token_valid = False
+                db.commit()
+                logger.warning(f"Token inválido para a conta {fb_account.account_id}")
+            except Exception as e:
+                logger.error(f"Erro ao buscar dados do Meta Ads para conta {fb_account.account_id}: {e}")
+            finally:
+                await service.close()
+
+    # 4. Buscar transações aprovadas no período com utm_source=FB
     transactions = _get_fb_transactions(db, date_start, date_end)
 
     # 4. Fazer o merge
@@ -98,7 +124,11 @@ async def get_campaigns_data(
     # 7. Vendas sem UTM (não identificadas)
     unidentified = _build_unidentified(db, date_start, date_end)
 
-    return {"campaigns": campaigns, "unidentified": unidentified}
+    return {
+        "campaigns": campaigns,
+        "unidentified": unidentified,
+        "last_sync_at": last_sync_at,
+    }
 
 
 def _get_fb_account(db: Session, account_id: Optional[int]) -> Optional[FacebookAccount]:
@@ -111,6 +141,25 @@ def _get_fb_account(db: Session, account_id: Optional[int]) -> Optional[Facebook
     return db.query(FacebookAccount).filter(
         FacebookAccount.token_valid.is_(True)
     ).first()
+
+def _identify_preset(date_start: str, date_end: str) -> Optional[str]:
+    """Identifica se as datas correspondem a um preset para buscar no cache."""
+    now = now_sp()
+    now_str = now.strftime("%Y-%m-%d")
+    yesterday_str = (now - timedelta(days=1)).strftime("%Y-%m-%d")
+    
+    if date_end == now_str:
+        if date_start == now_str: return "today"
+        if date_start == (now - timedelta(days=3)).strftime("%Y-%m-%d"): return "3d"
+        if date_start == (now - timedelta(days=7)).strftime("%Y-%m-%d"): return "7d"
+        if date_start == (now - timedelta(days=14)).strftime("%Y-%m-%d"): return "14d"
+        if date_start == (now - timedelta(days=30)).strftime("%Y-%m-%d"): return "30d"
+        if date_start == (now - timedelta(days=90)).strftime("%Y-%m-%d"): return "90d"
+        
+    if date_end == yesterday_str and date_start == yesterday_str:
+        return "yesterday"
+        
+    return None
 
 
 def _get_fb_transactions(db: Session, date_start: str, date_end: str) -> list[Transaction]:

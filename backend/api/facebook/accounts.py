@@ -60,8 +60,7 @@ async def create_account(
             detail="Essa conta já está cadastrada"
         )
 
-    real_name = await _fetch_account_name(payload.access_token, payload.account_id)
-    label = real_name or payload.label
+    label = payload.label or payload.account_id
 
     account = FacebookAccount(
         label=label,
@@ -91,17 +90,16 @@ async def create_accounts_bulk(
     created = []
     for item in payload.accounts:
         account_id = item.get("account_id", "").strip()
-        fallback_label = item.get("label", "").strip()
+        label = item.get("label", "").strip() or account_id
+        
         if not account_id:
             continue
+            
         existing = db.query(FacebookAccount).filter(
             FacebookAccount.account_id == account_id
         ).first()
         if existing:
             continue
-
-        real_name = await _fetch_account_name(payload.access_token, account_id)
-        label = real_name or fallback_label or account_id
 
         account = FacebookAccount(
             label=label,

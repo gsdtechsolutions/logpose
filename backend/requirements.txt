@@ -15,3 +15,5 @@ langchain-google-genai
 stripe
 facebook_business
 socksio
+celery
+redis

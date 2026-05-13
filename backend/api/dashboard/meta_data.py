@@ -11,6 +11,7 @@ from database.models.facebook_account import FacebookAccount
 from integrations.meta_ads.service import MetaAdsService
 from integrations.meta_ads.client import MetaAuthError
 from integrations.meta_ads.schemas import AccountInsightsSummary, CampaignInsights
+from database.models.facebook_cache import FacebookAdsCache
 
 logger = logging.getLogger(__name__)
 
@@ -36,56 +37,99 @@ def _mark_token_invalid(db: Session, account: FacebookAccount) -> None:
 
 async def fetch_meta_account_summary(
     db: Session,
+    preset: str,
     date_start: str,
     date_end: str,
 ) -> tuple[Optional[AccountInsightsSummary], Optional[str]]:
     """
-    Busca métricas agregadas da conta Meta Ads.
-    Retorna (summary, error_message).
+    Busca métricas agregadas das contas Meta Ads usando cache local preferencialmente.
+    Soma os valores de todas as contas ativas.
     """
-    fb = get_fb_account(db)
-    if not fb:
-        # Verifica se existe conta mas token inválido
-        has_invalid = db.query(FacebookAccount).filter(
-            FacebookAccount.token_valid.is_(False)
-        ).first()
+    fb_accounts = db.query(FacebookAccount).filter(FacebookAccount.token_valid.is_(True)).all()
+    if not fb_accounts:
+        has_invalid = db.query(FacebookAccount).filter(FacebookAccount.token_valid.is_(False)).first()
         if has_invalid:
             return None, "token_invalid"
         return None, None
 
-    service = MetaAdsService(fb.access_token, fb.account_id)
-    try:
-        summary = await service.get_account_summary(date_start, date_end)
-        return summary, None
-    except MetaAuthError as e:
-        _mark_token_invalid(db, fb)
-        return None, "token_invalid"
-    except Exception as e:
-        logger.error(f"Erro ao buscar account summary da Meta: {e}")
-        return None, None
-    finally:
-        await service.close()
+    total_summary = AccountInsightsSummary(
+        spend=0.0, impressions=0, clicks=0,
+        landing_page_views=0, initiate_checkout=0
+    )
+    
+    error_msg = None
+
+    for fb in fb_accounts:
+        # Tenta usar cache local se não for custom e existir no banco
+        if preset != "custom":
+            cache = db.query(FacebookAdsCache).filter(
+                FacebookAdsCache.account_id == fb.account_id,
+                FacebookAdsCache.date_preset == preset
+            ).first()
+            if cache and cache.summary_data is not None:
+                # Ensure we handle empty dictionaries properly by not throwing an error if it's completely empty
+                s_data = cache.summary_data if cache.summary_data else {}
+                s = AccountInsightsSummary(**s_data)
+                total_summary.spend += s.spend
+                total_summary.impressions += s.impressions
+                total_summary.clicks += s.clicks
+                total_summary.landing_page_views += s.landing_page_views
+                total_summary.initiate_checkout += s.initiate_checkout
+                continue
+
+        # Fallback on-demand se for custom ou cache não existir
+        service = MetaAdsService(fb.access_token, fb.account_id)
+        try:
+            s = await service.get_account_summary(date_start, date_end)
+            if s:
+                total_summary.spend += s.spend
+                total_summary.impressions += s.impressions
+                total_summary.clicks += s.clicks
+                total_summary.landing_page_views += s.landing_page_views
+                total_summary.initiate_checkout += s.initiate_checkout
+        except MetaAuthError:
+            _mark_token_invalid(db, fb)
+            error_msg = "token_invalid"
+        except Exception as e:
+            logger.error(f"Erro ao buscar account summary da Meta para a conta {fb.account_id}: {e}")
+        finally:
+            await service.close()
+
+    return total_summary, error_msg
 
 
 async def fetch_meta_campaigns_for_dashboard(
     db: Session,
+    preset: str,
     date_start: str,
     date_end: str,
 ) -> list[CampaignInsights]:
-    """Busca campanhas da Meta Ads para top campaigns do dashboard."""
-    fb = get_fb_account(db)
-    if not fb:
+    """Busca campanhas de TODAS as contas Meta Ads para top campaigns do dashboard (usando cache)."""
+    fb_accounts = db.query(FacebookAccount).filter(FacebookAccount.token_valid.is_(True)).all()
+    if not fb_accounts:
         return []
 
-    service = MetaAdsService(fb.access_token, fb.account_id)
-    try:
-        campaigns = await service.get_campaigns(date_start, date_end)
-        return campaigns
-    except MetaAuthError as e:
-        _mark_token_invalid(db, fb)
-        return []
-    except Exception as e:
-        logger.error(f"Erro ao buscar campanhas da Meta: {e}")
-        return []
-    finally:
-        await service.close()
+    all_campaigns = []
+
+    for fb in fb_accounts:
+        if preset != "custom":
+            cache = db.query(FacebookAdsCache).filter(
+                FacebookAdsCache.account_id == fb.account_id,
+                FacebookAdsCache.date_preset == preset
+            ).first()
+            if cache and cache.campaigns_data is not None:
+                all_campaigns.extend([CampaignInsights(**c) for c in cache.campaigns_data])
+                continue
+
+        service = MetaAdsService(fb.access_token, fb.account_id)
+        try:
+            campaigns = await service.get_campaigns(date_start, date_end)
+            all_campaigns.extend(campaigns)
+        except MetaAuthError:
+            _mark_token_invalid(db, fb)
+        except Exception as e:
+            logger.error(f"Erro ao buscar campanhas da Meta para a conta {fb.account_id}: {e}")
+        finally:
+            await service.close()
+
+    return all_campaigns

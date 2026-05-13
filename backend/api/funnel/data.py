@@ -36,7 +36,7 @@ async def get_funnel_data(
     result = []
     for product in products:
         campaign_ids = _get_product_campaign_ids(db, str(product.id))
-        fb = await _get_fb_for_product(accounts, meta_start, meta_end, campaign_ids)
+        fb = await _get_fb_for_product(db, preset, accounts, meta_start, meta_end, campaign_ids)
 
         sales_count, sales_revenue = _count_sales(db, product, dt_start, dt_end)
         ob_count, ob_revenue = _count_order_bumps(db, product, dt_start, dt_end)
@@ -90,6 +90,7 @@ def _get_product_campaign_ids(db: Session, product_id: str) -> list[str]:
 
 
 async def _get_fb_for_product(
+    db: Session, preset: str,
     accounts: list, meta_start: str, meta_end: str,
     campaign_ids: list[str],
 ) -> dict:
@@ -97,7 +98,7 @@ async def _get_fb_for_product(
         return {"impressions": 0, "clicks": 0, "lpv": 0, "checkout": 0, "spend": 0}
 
     ids_filter = campaign_ids if campaign_ids else None
-    return await fetch_facebook_aggregated(accounts, meta_start, meta_end, ids_filter)
+    return await fetch_facebook_aggregated(db, preset, accounts, meta_start, meta_end, ids_filter)
 
 
 def _count_sales(

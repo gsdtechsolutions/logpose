@@ -11,6 +11,7 @@ services:
       - DATABASE_URL=postgresql://postgres:postgres@db:5432/logpose
       - SECRET_KEY=convergeai-secret-key-change-in-production
       - META_GRAPH_API_VERSION=v25.0
+      - REDIS_URL=redis://redis:6379/0
     depends_on:
       db:
         condition: service_healthy
@@ -32,6 +33,29 @@ services:
       interval: 5s
       timeout: 5s
       retries: 5
+    networks:
+      - app-network
+
+  redis:
+    image: redis:alpine
+    networks:
+      - app-network
+
+  worker:
+    build:
+      context: ..
+      dockerfile: Dockerfile
+    command: celery -A celery_app worker --beat -l warning
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_started
+    environment:
+      - DATABASE_URL=postgresql://postgres:postgres@db:5432/logpose
+      - SECRET_KEY=convergeai-secret-key-change-in-production
+      - META_GRAPH_API_VERSION=v25.0
+      - REDIS_URL=redis://redis:6379/0
     networks:
       - app-network
 

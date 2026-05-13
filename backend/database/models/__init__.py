@@ -20,6 +20,7 @@ from database.models.stripe_account import StripeAccount
 from database.models.product_alias import ProductAlias
 from database.models.proxy_settings import ProxySettings
 from database.models.api_key import ApiKey
+from database.models.facebook_cache import FacebookAdsCache
 
 __all__ = [
     "Admin",
@@ -55,4 +56,5 @@ __all__ = [
     "ProductAlias",
     "ProxySettings",
     "ApiKey",
+    "FacebookAdsCache",
 ]

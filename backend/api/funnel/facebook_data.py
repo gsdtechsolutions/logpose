@@ -1,11 +1,15 @@
 import logging
+from sqlalchemy.orm import Session
 from integrations.meta_ads.service import MetaAdsService
 from database.models.facebook_account import FacebookAccount
+from database.models.facebook_cache import FacebookAdsCache
 
 logger = logging.getLogger(__name__)
 
 
 async def fetch_facebook_aggregated(
+    db: Session,
+    preset: str,
     accounts: list[FacebookAccount],
     date_start: str,
     date_end: str,
@@ -23,27 +27,66 @@ async def fetch_facebook_aggregated(
 
     for account in accounts:
         try:
-            service = MetaAdsService(account.access_token, account.account_id)
+            used_cache = False
+            metrics = None
 
-            if campaign_ids:
-                metrics = await _fetch_filtered_by_campaigns(
-                    service, date_start, date_end, campaign_ids,
-                )
-            else:
-                summary = await service.get_account_summary(date_start, date_end)
-                metrics = {
-                    "reach": summary.impressions,
-                    "impressions": summary.impressions,
-                    "clicks": summary.clicks,
-                    "lpv": summary.landing_page_views,
-                    "checkout": summary.initiate_checkout,
-                    "spend": summary.spend,
-                }
+            if preset != "custom":
+                cache = db.query(FacebookAdsCache).filter(
+                    FacebookAdsCache.account_id == account.account_id,
+                    FacebookAdsCache.date_preset == preset
+                ).first()
+                
+                if cache:
+                    if campaign_ids:
+                        if cache.campaigns_data is not None:
+                            metrics = {
+                                "reach": 0, "impressions": 0, "clicks": 0,
+                                "lpv": 0, "checkout": 0, "spend": 0.0,
+                            }
+                            ids_set = set(campaign_ids)
+                            for c in cache.campaigns_data:
+                                if c.get("id") in ids_set:
+                                    metrics["reach"] += c.get("impressions", 0)
+                                    metrics["impressions"] += c.get("impressions", 0)
+                                    metrics["clicks"] += c.get("clicks", 0)
+                                    metrics["lpv"] += c.get("landing_page_views", 0)
+                                    metrics["checkout"] += c.get("initiate_checkout", 0)
+                                    metrics["spend"] += c.get("spend", 0.0)
+                            used_cache = True
+                    else:
+                        if cache.summary_data is not None:
+                            s = cache.summary_data if cache.summary_data else {}
+                            metrics = {
+                                "reach": s.get("impressions", 0),
+                                "impressions": s.get("impressions", 0),
+                                "clicks": s.get("clicks", 0),
+                                "lpv": s.get("landing_page_views", 0),
+                                "checkout": s.get("initiate_checkout", 0),
+                                "spend": s.get("spend", 0.0),
+                            }
+                            used_cache = True
 
-            await service.close()
+            if not used_cache:
+                service = MetaAdsService(account.access_token, account.account_id)
+                if campaign_ids:
+                    metrics = await _fetch_filtered_by_campaigns(
+                        service, date_start, date_end, campaign_ids,
+                    )
+                else:
+                    summary = await service.get_account_summary(date_start, date_end)
+                    metrics = {
+                        "reach": summary.impressions,
+                        "impressions": summary.impressions,
+                        "clicks": summary.clicks,
+                        "lpv": summary.landing_page_views,
+                        "checkout": summary.initiate_checkout,
+                        "spend": summary.spend,
+                    }
+                await service.close()
 
-            for key in totals:
-                totals[key] += metrics.get(key, 0)
+            if metrics:
+                for key in totals:
+                    totals[key] += metrics.get(key, 0)
 
         except Exception as e:
             logger.warning(

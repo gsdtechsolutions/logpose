@@ -1,9 +1,10 @@
-import { RiMegaphoneLine, RiSearchLine, RiAddLine, RiSettings3Line } from "@remixicon/react";
+import { RiMegaphoneLine, RiSearchLine, RiAddLine, RiSettings3Line, RiInformationLine } from "@remixicon/react";
 import { useNavigate } from "react-router-dom";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import type { ColumnPreset } from "./columnPresets";
 import { BlurToggle, type BlurState } from "./BlurToggle";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { UtmParamsGuide } from "./UtmParamsGuide";
 import { RefreshButton } from "@/components/RefreshButton";
 import type { UnidentifiedProduct } from "@/services/campaigns";
@@ -25,6 +26,7 @@ interface CampaignsHeaderProps {
   onOpenSettings: () => void;
   /** IDs of built-in (non-editable) presets */
   defaultPresetIds?: string[];
+  lastSyncAt?: string | null;
 }
 
 export function CampaignsHeader({
@@ -33,8 +35,13 @@ export function CampaignsHeader({
   onEditPreset, onDeletePreset,
   blur, onBlurChange, unidentifiedProducts, onRefresh, onOpenSettings,
   defaultPresetIds = [],
+  lastSyncAt,
 }: CampaignsHeaderProps) {
   const navigate = useNavigate();
+
+  const syncTimeStr = lastSyncAt
+    ? new Date(lastSyncAt).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })
+    : null;
 
   return (
     <div className="flex flex-col gap-4">
@@ -44,7 +51,25 @@ export function CampaignsHeader({
             <RiMegaphoneLine className="size-5 text-primary" />
           </div>
           <div>
-            <h1 className="text-xl sm:text-2xl font-bold tracking-tight">Campanhas</h1>
+            <div className="flex items-center gap-2">
+              <h1 className="text-xl sm:text-2xl font-bold tracking-tight">Campanhas</h1>
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <div className="flex items-center gap-1.5 text-xs font-medium px-2 py-0.5 rounded-full bg-muted text-muted-foreground cursor-help">
+                      <RiInformationLine className="size-3" />
+                      {syncTimeStr ? `Sync ${syncTimeStr}` : "Ao vivo"}
+                    </div>
+                  </TooltipTrigger>
+                  <TooltipContent side="right" className="max-w-[280px]">
+                    <p className="text-sm">
+                      Para maior performance e segurança, os dados da Meta são sincronizados automaticamente a cada 10 minutos em background.
+                      {syncTimeStr && <span className="block mt-1 font-medium">Última sincronização: {syncTimeStr}</span>}
+                    </p>
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+            </div>
             <p className="text-sm text-muted-foreground">
               Performance com vendas reais
             </p>

@@ -1,5 +1,6 @@
 import { useState, useCallback, useRef } from "react";
 import { useCachedQuery } from "./useCachedQuery";
+import { toast } from "sonner";
 import {
   fetchCampaignsData,
   toggleCampaignStatus,
@@ -27,12 +28,14 @@ export function useCampaigns(dateStart: string, dateEnd: string) {
   // Guard against concurrent toggles on the same entity
   const toggleInProgressRef = useRef<Set<string>>(new Set());
 
-  const activeAccountId = selectedAccountId ?? accounts[0]?.id;
+  // activeAccountId is undefined when "All" is selected
+  const activeAccountId = selectedAccountId;
 
   const { data, isLoading, error, reload, silentReload } = useCachedQuery<{
     campaigns: CampaignData[];
     unidentified: CampaignData | null;
     error?: string | null;
+    last_sync_at?: string | null;
   }>({
     cachePrefix: "campaigns",
     params: { dateStart, dateEnd, activeAccountId },
@@ -84,7 +87,12 @@ export function useCampaigns(dateStart: string, dateEnd: string) {
     metrics?: Record<string, number>,
     budget?: number,
   ) => {
-    if (!activeAccountId) return;
+    if (!activeAccountId) {
+      toast.error("Selecione uma conta", {
+        description: "Para alterar o status, selecione uma conta específica no filtro ao invés de 'Todas'.",
+      });
+      return;
+    }
 
     // Prevent concurrent toggles on the same entity
     if (toggleInProgressRef.current.has(entityId)) return;
@@ -120,7 +128,12 @@ export function useCampaigns(dateStart: string, dateEnd: string) {
     budgetBefore?: number,
     metrics?: Record<string, number>,
   ) => {
-    if (!activeAccountId) return;
+    if (!activeAccountId) {
+      toast.error("Selecione uma conta", {
+        description: "Para alterar o orçamento, selecione uma conta específica no filtro ao invés de 'Todas'.",
+      });
+      return;
+    }
     setOptimisticOverrides((prev) => ({
       ...prev,
       [entityId]: { ...prev[entityId], budget: dailyBudget },
@@ -146,6 +159,7 @@ export function useCampaigns(dateStart: string, dateEnd: string) {
     campaigns,
     unidentified: data?.unidentified ?? null,
     metaError: data?.error ?? null,
+    lastSyncAt: data?.last_sync_at ?? null,
     isLoading: isInitialLoading,
     error,
     accounts,

@@ -72,9 +72,9 @@ async def get_campaigns_data(
             
             if cache and cache.campaigns_data is not None:
                 print(f"✅ [CACHE] Dados obtidos do Banco de Dados para a conta {fb_account.account_id} (Preset: {preset})", flush=True)
-                meta_campaigns.extend([CampaignInsights(**c) for c in cache.campaigns_data])
-                meta_adsets.extend([AdSetInsights(**c) for c in cache.adsets_data])
-                meta_ads.extend([AdInsights(**c) for c in cache.ads_data])
+                meta_campaigns.extend([CampaignInsights.model_construct(**c) for c in cache.campaigns_data])
+                meta_adsets.extend([AdSetInsights.model_construct(**c) for c in cache.adsets_data])
+                meta_ads.extend([AdInsights.model_construct(**c) for c in cache.ads_data])
                 used_cache = True
                 if cache.updated_at:
                     last_sync_at = cache.updated_at.isoformat()

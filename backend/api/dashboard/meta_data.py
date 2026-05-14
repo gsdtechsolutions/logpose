@@ -71,7 +71,7 @@ async def fetch_meta_account_summary(
                 print(f"✅ [CACHE] Account Summary obtido do Banco de Dados para a conta {fb.account_id} (Preset: {preset})", flush=True)
                 # Ensure we handle empty dictionaries properly by not throwing an error if it's completely empty
                 s_data = cache.summary_data if cache.summary_data else {}
-                s = AccountInsightsSummary(**s_data)
+                s = AccountInsightsSummary.model_construct(**s_data)
                 total_summary.spend += s.spend
                 total_summary.impressions += s.impressions
                 total_summary.clicks += s.clicks
@@ -123,7 +123,7 @@ async def fetch_meta_campaigns_for_dashboard(
             ).first()
             if cache and cache.campaigns_data is not None:
                 print(f"✅ [CACHE] Campanhas do Dashboard obtidas do Banco de Dados para a conta {fb.account_id} (Preset: {preset})", flush=True)
-                all_campaigns.extend([CampaignInsights(**c) for c in cache.campaigns_data])
+                all_campaigns.extend([CampaignInsights.model_construct(**c) for c in cache.campaigns_data])
                 continue
 
         proxy = get_proxy_url(db, fb.id)

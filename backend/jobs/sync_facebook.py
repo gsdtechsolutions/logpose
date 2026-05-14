@@ -61,8 +61,14 @@ async def async_sync_all_accounts():
                     logger.info(f"Syncing account {account.account_id} for preset {preset} ({ds_str} to {de_str})")
                     
                     try:
-                        campaigns, adsets, ads = await service.get_all_levels(ds_str, de_str)
-                        summary = await service.get_account_summary(ds_str, de_str)
+                        # Timeout global de 120s para todo o processo de sync de um preset nesta conta.
+                        # Evita Silent Hang caso a request congele de ponta a ponta sem disparar timeout http.
+                        async def _fetch():
+                            c, ad, a = await service.get_all_levels(ds_str, de_str)
+                            s = await service.get_account_summary(ds_str, de_str)
+                            return c, ad, a, s
+                            
+                        campaigns, adsets, ads, summary = await asyncio.wait_for(_fetch(), timeout=120.0)
 
                         # Converte Pydantic para dict
                         campaigns_data = [c.model_dump() for c in campaigns]

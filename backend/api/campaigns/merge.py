@@ -97,6 +97,16 @@ def merge_campaigns(
 ) -> list[dict[str, Any]]:
     """Cruza campanhas do Meta com transações do DB."""
     grouped = _group_transactions_by_level(transactions)
+    
+    # Pre-group adsets and ads to avoid O(N*M) filtering inside loops
+    adsets_by_camp = defaultdict(list)
+    for a in meta_adsets:
+        adsets_by_camp[a.campaign_id].append(a)
+        
+    ads_by_adset = defaultdict(list)
+    for a in meta_ads:
+        ads_by_adset[a.ad_set_id].append(a)
+        
     results = []
 
     for camp in meta_campaigns:
@@ -106,9 +116,9 @@ def merge_campaigns(
         sales_data = _calc_sales_metrics(txs)
 
         # Buscar adsets desta campanha
-        camp_adsets = [a for a in meta_adsets if a.campaign_id == camp.id]
+        camp_adsets = adsets_by_camp.get(camp.id, [])
         adsets_merged = _merge_adsets_for_campaign(
-            camp_adsets, meta_ads, grouped,
+            camp_adsets, ads_by_adset, grouped,
         )
 
         profit = sales_data["revenue"] - camp.spend

@@ -85,6 +85,14 @@ async def get_campaigns_data(
             try:
                 print(f"🔥 [LIVE] Dados obtidos AO VIVO da Meta (On-Demand) para a conta {fb_account.account_id}", flush=True)
                 c, ad, a = await service.get_all_levels(date_start, date_end)
+                
+                if status_filter and status_filter != "all":
+                    c = [camp for camp in c if camp.status == status_filter]
+                    valid_camp_ids = {camp.id for camp in c}
+                    ad = [adset for adset in ad if adset.campaign_id in valid_camp_ids]
+                    valid_adset_ids = {adset.id for adset in ad}
+                    a = [ad_obj for ad_obj in a if ad_obj.ad_set_id in valid_adset_ids]
+
                 meta_campaigns.extend(c)
                 meta_adsets.extend(ad)
                 meta_ads.extend(a)
@@ -119,11 +127,7 @@ async def get_campaigns_data(
     # Atribuir stats a cada campanha
     _apply_vturb_stats(campaigns, stats_map)
 
-    # 6. Filtrar por status se necessário
-    if status_filter and status_filter != "all":
-        campaigns = [c for c in campaigns if c["status"] == status_filter]
-
-    # 7. Vendas sem UTM (não identificadas)
+    # 6. Vendas sem UTM (não identificadas)
     unidentified = _build_unidentified(db, date_start, date_end)
 
     return {

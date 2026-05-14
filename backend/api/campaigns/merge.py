@@ -161,7 +161,7 @@ def merge_campaigns(
 
 def _merge_adsets_for_campaign(
     meta_adsets: list[AdSetInsights],
-    meta_ads: list[AdInsights],
+    ads_by_adset: dict,
     grouped: dict,
 ) -> list[dict[str, Any]]:
     """Merge adsets level."""
@@ -173,7 +173,7 @@ def _merge_adsets_for_campaign(
         sales_data = _calc_sales_metrics(txs)
 
         # Ads deste adset
-        adset_ads = [a for a in meta_ads if a.ad_set_id == adset.id]
+        adset_ads = ads_by_adset.get(adset.id, [])
         ads_merged = merge_ads(adset_ads, grouped)
 
         profit = sales_data["revenue"] - adset.spend

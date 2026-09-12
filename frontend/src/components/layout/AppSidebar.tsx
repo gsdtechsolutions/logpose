@@ -56,6 +56,8 @@ const navGroups: NavGroup[] = [
       { title: "Assinatura", icon: RiRepeatLine, url: "/subscriptions", featureKey: "stripe_enabled" },
     ],
   },
+
+
   {
     label: "Comercial",
     items: [

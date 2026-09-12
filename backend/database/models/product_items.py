@@ -10,6 +10,8 @@ import enum
 class CheckoutPlatform(str, enum.Enum):
     KIWIFY = "kiwify"
     PAYT = "payt"
+    HUBLA = "hubla"
+    CAKTO = "cakto"
 
 
 class Checkout(Base):

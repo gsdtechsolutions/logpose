@@ -18,6 +18,8 @@ class TransactionStatus(str, enum.Enum):
 class PaymentPlatform(str, enum.Enum):
     KIWIFY = "kiwify"
     PAYT = "payt"
+    HUBLA = "hubla"
+    CAKTO = "cakto"
     API = "api"
 
 

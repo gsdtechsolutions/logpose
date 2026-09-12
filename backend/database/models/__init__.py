@@ -21,6 +21,9 @@ from database.models.product_alias import ProductAlias
 from database.models.proxy_settings import ProxySettings
 from database.models.api_key import ApiKey
 from database.models.facebook_cache import FacebookAdsCache
+from database.models.facebook_daily_campaign import FacebookDailyCampaign
+from database.models.facebook_daily_adset import FacebookDailyAdset
+from database.models.facebook_daily_ad import FacebookDailyAd
 
 __all__ = [
     "Admin",
@@ -57,4 +60,7 @@ __all__ = [
     "ProxySettings",
     "ApiKey",
     "FacebookAdsCache",
+    "FacebookDailyCampaign",
+    "FacebookDailyAdset",
+    "FacebookDailyAd",
 ]

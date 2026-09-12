@@ -22,6 +22,7 @@ import type { MarkerMap } from "@/hooks/useCampaignMarkers";
 import { useKpiColorsContext } from "./KpiColorsContext";
 import { handleExportCampaignFromTable } from "./exportCampaign";
 import { handleDuplicateCampaign } from "./duplicateCampaign";
+import { useFacebookAccounts } from "@/hooks/useFacebookAccounts";
 
 interface CampaignsTableProps {
   data: CampaignData[];
@@ -29,8 +30,8 @@ interface CampaignsTableProps {
   blur?: BlurState;
   tagsMap?: Record<string, string[]>;
   markersMap?: MarkerMap;
-  onToggle: (entityId: string, entityType: "campaign" | "adset" | "ad", active: boolean, entityName?: string, metrics?: Record<string, number>, budget?: number) => Promise<void>;
-  onBudgetChange: (entityId: string, entityType: "campaign" | "adset", dailyBudget: number, entityName?: string, budgetBefore?: number, metrics?: Record<string, number>) => Promise<void>;
+  onToggle: (entityId: string, entityType: "campaign" | "adset" | "ad", active: boolean, campaignAccountId?: string, entityName?: string, metrics?: Record<string, number>, budget?: number) => Promise<void>;
+  onBudgetChange: (entityId: string, entityType: "campaign" | "adset", dailyBudget: number, campaignAccountId?: string, entityName?: string, budgetBefore?: number, metrics?: Record<string, number>) => Promise<void>;
   onSaveTags?: (campaignId: string, tags: string[]) => Promise<void>;
   onSaveMarker?: (campaignId: string, type: "video" | "checkout" | "product" | "platform", refId: string, refLabel: string) => Promise<void>;
   accountId?: number;
@@ -42,6 +43,7 @@ interface DeactivateState {
   entityName: string;
   entityType: "campaign" | "adset" | "ad";
   metrics: DeactivateMetrics;
+  accountIdStr?: string;
 }
 
 const emptyMetrics: DeactivateMetrics = {
@@ -74,10 +76,25 @@ export function CampaignsTable({
   const blurClass = "blur-sm select-none";
   const kpiColors = useKpiColorsContext();
   const { sorted: sortedData, sortKey, toggleSort } = useCampaignSort(data);
+  const { accounts: fbAccounts } = useFacebookAccounts();
+
+  const handleOpenFacebook = useCallback((campaignAccountId?: string) => {
+    if (!campaignAccountId) return;
+    const cleanAct = campaignAccountId.replace(/^act_/, "");
+    window.open(`https://adsmanager.facebook.com/adsmanager?act=${cleanAct}`, "_blank");
+  }, []);
 
   /** Intercepts toggle: if deactivating, shows confirmation modal first. */
   const handleToggle = useCallback(
     async (entityId: string, entityType: "campaign" | "adset" | "ad", active: boolean) => {
+      let accountIdStr: string | undefined;
+      for (const c of data) {
+        if (c.status === "unidentified") continue;
+        if (entityType === "campaign" && c.id === entityId) { accountIdStr = c.account_id; break; }
+        if (entityType === "adset" && c.adsets.some(a => a.id === entityId)) { accountIdStr = c.account_id; break; }
+        if (entityType === "ad" && c.adsets.some(a => a.ads.some(ad => ad.id === entityId))) { accountIdStr = c.account_id; break; }
+      }
+
       const found = findEntityMetrics(data, entityId, entityType);
       const metricsObj = found ? {
         spend: found.metrics.spend, revenue: found.metrics.revenue,
@@ -88,11 +105,11 @@ export function CampaignsTable({
       } : undefined;
 
       if (active) {
-        await onToggle(entityId, entityType, true, found?.name, metricsObj, found?.metrics.budget);
+        await onToggle(entityId, entityType, true, accountIdStr, found?.name, metricsObj, found?.metrics.budget);
         return;
       }
-      if (!found) { await onToggle(entityId, entityType, false); return; }
-      setDeactivateModal({ open: true, entityId, entityName: found.name, entityType, metrics: found.metrics });
+      if (!found) { await onToggle(entityId, entityType, false, accountIdStr); return; }
+      setDeactivateModal({ open: true, entityId, entityName: found.name, entityType, metrics: found.metrics, accountIdStr });
     }, [data, onToggle],
   );
 
@@ -107,7 +124,7 @@ export function CampaignsTable({
     try {
       await onToggle(
         deactivateModal.entityId, deactivateModal.entityType, false,
-        deactivateModal.entityName, metricsObj, m.budget,
+        deactivateModal.accountIdStr, deactivateModal.entityName, metricsObj, m.budget,
       );
     }
     finally { setDeactivateLoading(false); setDeactivateModal(emptyDeactivate); }
@@ -174,6 +191,12 @@ export function CampaignsTable({
                     </TableRow>
                   );
 
+                  const getTargetAccountId = (campaignAccountIdStr: string) => {
+                    if (accountId) return accountId;
+                    const acc = fbAccounts.find((a) => a.account_id === campaignAccountIdStr);
+                    return acc ? acc.id : undefined;
+                  };
+
                   return (
                     <Fragment key={c.id}>
                       {isUnidentified ? rowContent : (
@@ -186,15 +209,21 @@ export function CampaignsTable({
                           onDefineVideo={() => setVideoModal({ open: true, campaign: c })}
                           onDefineCheckout={() => setCheckoutModal({ open: true, campaign: c })}
                           onDefineProduct={() => setProductModal({ open: true, campaign: c })}
-                          onExportCampaign={() => handleExportCampaignFromTable({ campaign: c, markersMap, accountId })}
-                          onDuplicateCampaign={() => handleDuplicateCampaign({ campaign: c, markersMap, accountId, navigate })}
+                          onExportCampaign={() => handleExportCampaignFromTable({ campaign: c, markersMap, accountId: getTargetAccountId(c.account_id) })}
+                          onDuplicateCampaign={() => handleDuplicateCampaign({ campaign: c, markersMap, accountId: getTargetAccountId(c.account_id), navigate })}
                           onViewInfo={() => setInfoModal({ open: true, campaign: c })}
+                          onOpenFacebook={() => handleOpenFacebook(c.account_id)}
                         >{rowContent}</CampaignContextMenu>
                       )}
                       {isExpanded && !isUnidentified && c.adsets.length > 0 && (
                         <TableRow key={`${c.id}-adsets`}>
                           <TableCell colSpan={visibleCols.length + 1} className="p-0">
-                            <AdSetsSubTable adSets={c.adsets} columns={columns} onToggle={handleToggle} onBudgetChange={onBudgetChange} />
+                            <AdSetsSubTable 
+                              adSets={c.adsets} 
+                              columns={columns} 
+                              onToggle={handleToggle} 
+                              onBudgetChange={(id, type, bdgt, name, prev, metrics) => onBudgetChange(id, type, bdgt, c.account_id, name, prev, metrics)} 
+                            />
                           </TableCell>
                         </TableRow>
                       )}

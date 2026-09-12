@@ -8,7 +8,7 @@ celery_app = Celery(
     "logpose_worker",
     broker=redis_url,
     backend=redis_url,
-    include=["jobs.sync_facebook"]
+    include=["jobs.sync_facebook", "jobs.sync_facebook_backfill"]
 )
 
 celery_app.conf.update(
@@ -19,10 +19,6 @@ celery_app.conf.update(
     enable_utc=False,
 )
 
-# Configura o cron para rodar a cada 15 minutos
-celery_app.conf.beat_schedule = {
-    "sync-facebook-ads-every-15-mins": {
-        "task": "jobs.sync_facebook.sync_all_facebook_accounts",
-        "schedule": crontab(minute="*/15"),
-    },
-}
+# Beat schedule desativado: sincronização é feita sob demanda (Lazy Sync)
+celery_app.conf.beat_schedule = {}
+

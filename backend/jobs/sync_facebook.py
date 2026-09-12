@@ -1,129 +1,93 @@
+"""
+Job de sync Facebook Ads com time_increment=1.
+Busca dados de HOJE para cada conta ativa e faz upsert daily.
+Sem activity gate — a Meta retorna vazio se não houver gasto.
+"""
 import asyncio
 import logging
-import time
-from datetime import timedelta
-from sqlalchemy.orm import Session
-from celery_app import celery_app
 
+from celery_app import celery_app
 from database.core.connection import SessionLocal
 from database.core.timezone import now_sp
 from database.models.facebook_account import FacebookAccount
-from database.models.facebook_cache import FacebookAdsCache
-from integrations.meta_ads.service import MetaAdsService
-from integrations.meta_ads.client import MetaAccountBlockedError
+from integrations.meta_ads.client import MetaAdsClient, MetaAccountBlockedError, MetaAuthError
 from integrations.meta_ads.http_factory import get_proxy_url
+from integrations.meta_ads.fetch_daily import (
+    fetch_daily_campaigns, fetch_daily_adsets, fetch_daily_ads,
+)
+from jobs.sync_facebook_upsert import upsert_campaigns, upsert_adsets, upsert_ads
 
 logger = logging.getLogger(__name__)
 
-PRESETS = ["today", "yesterday", "3d", "7d", "14d", "30d", "90d"]
 
-def _parse_date_range(preset: str):
-    now = now_sp()
-    if preset == "today":
-        return now.replace(hour=0, minute=0, second=0, microsecond=0), now
-    elif preset == "yesterday":
-        yesterday = now - timedelta(days=1)
-        return yesterday.replace(hour=0, minute=0, second=0, microsecond=0), yesterday.replace(hour=23, minute=59, second=59, microsecond=999999)
-    elif preset == "3d":
-        return now - timedelta(days=3), now
-    elif preset == "7d":
-        return now - timedelta(days=7), now
-    elif preset == "14d":
-        return now - timedelta(days=14), now
-    elif preset == "30d":
-        return now - timedelta(days=30), now
-    elif preset == "90d":
-        return now - timedelta(days=90), now
-    return None, None
-
-async def _sync_single_preset(db, account, preset, service):
-    """Sincroniza um único preset para uma conta específica."""
-    d_start, d_end = _parse_date_range(preset)
-    if not d_start or not d_end:
-        return
-
-    ds_str = d_start.strftime("%Y-%m-%d")
-    de_str = d_end.strftime("%Y-%m-%d")
-
-    logger.info(f"Syncing account {account.account_id} for preset {preset} ({ds_str} to {de_str})")
+async def _sync_account_today(account: FacebookAccount, start_str: str, end_str: str) -> None:
+    """
+    Busca dados dos últimos dias para uma conta e faz upsert.
+    Se não há gasto, a Meta retorna vazio — nada é salvo e segue em frente.
+    """
+    db = SessionLocal()
+    client = MetaAdsClient(account.access_token, account.account_id, proxy_url=None)
 
     try:
-        async def _fetch():
-            c, ad, a = await service.get_all_levels(ds_str, de_str)
-            s = await service.get_account_summary(ds_str, de_str)
-            return c, ad, a, s
+        # 3 requests em paralelo (campaigns + adsets + ads) com time_increment=1
+        campaigns, adsets, ads = await asyncio.gather(
+            fetch_daily_campaigns(client, start_str, end_str),
+            fetch_daily_adsets(client, start_str, end_str),
+            fetch_daily_ads(client, start_str, end_str),
+        )
 
-        campaigns, adsets, ads, summary = await asyncio.wait_for(_fetch(), timeout=120.0)
+        if not campaigns and not adsets and not ads:
+            logger.info(f"⏭️  {account.account_id}: sem dados hoje, skipping upsert")
+            return
 
-        # Converte Pydantic para dict
-        campaigns_data = [c.model_dump() for c in campaigns]
-        adsets_data = [a.model_dump() for a in adsets]
-        ads_data = [a.model_dump() for a in ads]
-        summary_data = summary.model_dump() if summary else {}
-
-        # Salva ou atualiza no banco
-        cache_entry = db.query(FacebookAdsCache).filter(
-            FacebookAdsCache.account_id == account.account_id,
-            FacebookAdsCache.date_preset == preset
-        ).first()
-
-        if not cache_entry:
-            cache_entry = FacebookAdsCache(
-                account_id=account.account_id,
-                date_preset=preset,
-            )
-            db.add(cache_entry)
-
-        cache_entry.campaigns_data = campaigns_data
-        cache_entry.adsets_data = adsets_data
-        cache_entry.ads_data = ads_data
-        cache_entry.summary_data = summary_data
+        upsert_campaigns(db, account.account_id, campaigns)
+        upsert_adsets(db, account.account_id, adsets)
+        upsert_ads(db, account.account_id, ads)
         db.commit()
 
-    except MetaAccountBlockedError as e:
-        logger.error(f"Conta bloqueada/restrita: {account.account_id}. Parando sync para esta conta.")
-        raise e  # Repassa para interromper os outros presets dessa conta
+        logger.info(
+            f"💾 {account.account_id}: "
+            f"{len(campaigns)} camps | {len(adsets)} adsets | {len(ads)} ads"
+        )
+
+    except MetaAuthError:
+        logger.warning(f"Token inválido: {account.account_id} — marcando como inválido")
+        account.token_valid = False
+        db.commit()
+    except MetaAccountBlockedError:
+        logger.error(f"Conta bloqueada: {account.account_id}")
     except Exception as e:
-        logger.error(f"Erro ao fazer sync do preset {preset} para a conta {account.account_id}: {e}")
+        logger.error(f"Erro sync {account.account_id}: {e}")
+        db.rollback()
+    finally:
+        await client.close()
+        db.close()
 
-async def _sync_single_account(account, sem):
-    """Sincroniza todos os presets de uma conta. Usa o mesmo DB local para a task."""
-    async with sem:
-        db = SessionLocal()
-        proxy = get_proxy_url(db, account.id)
-        service = MetaAdsService(account.access_token, account.account_id, proxy_url=proxy)
-        try:
-            for preset in PRESETS:
-                try:
-                    await _sync_single_preset(db, account, preset, service)
-                except MetaAccountBlockedError:
-                    break # Se a conta tá bloqueada, aborta os próximos presets
-                # Delay curto entre presets da MESMA conta
-                await asyncio.sleep(1)
-        finally:
-            await service.close()
-            db.close()
 
-async def async_sync_all_accounts():
+async def async_sync_today():
+    """Sincroniza os últimos 3 dias para todas as contas ativas (3 requests por conta)."""
+    from datetime import timedelta
     db = SessionLocal()
+    end_str = now_sp().strftime("%Y-%m-%d")
+    start_str = (now_sp() - timedelta(days=3)).strftime("%Y-%m-%d")
+
     try:
-        # Pega todas as contas ativas
-        accounts = db.query(FacebookAccount).filter(FacebookAccount.token_valid.is_(True)).all()
-        logger.info(f"Iniciando sync de {len(accounts)} contas Facebook Ads em paralelo")
-        
-        # Limite de contas processadas simultaneamente (Ex: 10 por vez)
-        sem = asyncio.Semaphore(10)
-        
-        tasks = [_sync_single_account(account, sem) for account in accounts]
-        await asyncio.gather(*tasks)
+        accounts = db.query(FacebookAccount).filter(
+            FacebookAccount.token_valid.is_(True)
+        ).all()
+        logger.info(f"🔄 Sync daily (3 dias): {len(accounts)} contas | {start_str} a {end_str}")
+
+        for account in accounts:
+            await _sync_account_today(account, start_str, end_str)
+            await asyncio.sleep(1)  # Delay entre contas para respeitar rate limit
 
     except Exception as e:
-        logger.error(f"Erro no job de sync_facebook: {e}")
+        logger.error(f"Erro no job sync_today: {e}")
     finally:
         db.close()
 
 
 @celery_app.task(name="jobs.sync_facebook.sync_all_facebook_accounts")
 def sync_all_facebook_accounts():
-    """Tarefa Celery síncrona que roda a função assíncrona usando asyncio."""
-    asyncio.run(async_sync_all_accounts())
+    """Tarefa Celery que roda a cada 30 minutos."""
+    asyncio.run(async_sync_today())

@@ -38,7 +38,7 @@ def customer_filter_options(
         .all()
     )
 
-    platform_labels = {"kiwify": "Kiwify", "payt": "PayT", "api": "API"}
+    platform_labels = {"kiwify": "Kiwify", "payt": "PayT", "hubla": "Hubla", "cakto": "Cakto", "api": "API"}
 
     accounts = db.query(WebhookEndpoint).order_by(WebhookEndpoint.name).all()
 

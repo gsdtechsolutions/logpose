@@ -6,7 +6,7 @@ import { PlatformLogo } from "@/components/PlatformLogo";
 // ── Checkout Identifier Cell ────────────────────────────────
 
 export function CheckoutIdentifierCell({ url, checkoutCode, platform, name }: {
-  url: string; checkoutCode: string | null; platform: "kiwify" | "payt"; name: string | null;
+  url: string; checkoutCode: string | null; platform: "kiwify" | "payt" | "hubla" | "cakto"; name: string | null;
 }) {
   const handleOpen = (e: React.MouseEvent) => {
     if (!url) return;
@@ -77,11 +77,13 @@ function UrlCell({ url }: { url: string }) {
 
 // ── Platform Cell ───────────────────────────────────────────
 
-export function PlatformCell({ platform }: { platform: "kiwify" | "payt" }) {
+const PLATFORM_LABELS: Record<string, string> = { kiwify: "Kiwify", payt: "PayT", hubla: "Hubla", cakto: "Cakto" };
+
+export function PlatformCell({ platform }: { platform: "kiwify" | "payt" | "hubla" | "cakto" }) {
   return (
     <Badge variant="outline" className="text-[10px] gap-1 py-0.5">
-      <PlatformLogo platform={platform} size="sm" showLabel={false} />
-      {platform === "payt" ? "PayT" : "Kiwify"}
+      <PlatformLogo platform={platform as any} size="sm" showLabel={false} />
+      {PLATFORM_LABELS[platform] || platform}
     </Badge>
   );
 }

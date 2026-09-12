@@ -18,7 +18,7 @@ export interface EditItemData {
   name?: string;
   externalId?: string;
   price: number;
-  platform?: "kiwify" | "payt";
+  platform?: "kiwify" | "payt" | "hubla" | "cakto";
   checkoutCode?: string | null;
   checkoutName?: string | null;
 }

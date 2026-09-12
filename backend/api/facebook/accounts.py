@@ -1,7 +1,8 @@
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, BackgroundTasks
 from sqlalchemy.orm import Session
 from pydantic import BaseModel
 from datetime import datetime
+import asyncio
 import logging
 import httpx
 import os
@@ -48,6 +49,7 @@ def list_accounts(
 @router.post("/accounts", response_model=FacebookAccountResponse, status_code=201)
 async def create_account(
     payload: FacebookAccountCreate,
+    background_tasks: BackgroundTasks,
     db: Session = Depends(get_db),
     _=Depends(get_current_user),
 ):
@@ -55,10 +57,7 @@ async def create_account(
         FacebookAccount.account_id == payload.account_id
     ).first()
     if existing:
-        raise HTTPException(
-            status_code=400,
-            detail="Essa conta já está cadastrada"
-        )
+        raise HTTPException(status_code=400, detail="Essa conta já está cadastrada")
 
     label = payload.label or payload.account_id
 
@@ -72,6 +71,10 @@ async def create_account(
     db.add(account)
     db.commit()
     db.refresh(account)
+
+    # Dispara backfill histórico em background
+    background_tasks.add_task(_trigger_backfill_for_account, account)
+
     return account
 
 
@@ -84,6 +87,7 @@ class FacebookBulkCreate(BaseModel):
 @router.post("/accounts/bulk", response_model=list[FacebookAccountResponse], status_code=201)
 async def create_accounts_bulk(
     payload: FacebookBulkCreate,
+    background_tasks: BackgroundTasks,
     db: Session = Depends(get_db),
     _=Depends(get_current_user),
 ):
@@ -91,10 +95,10 @@ async def create_accounts_bulk(
     for item in payload.accounts:
         account_id = item.get("account_id", "").strip()
         label = item.get("label", "").strip() or account_id
-        
+
         if not account_id:
             continue
-            
+
         existing = db.query(FacebookAccount).filter(
             FacebookAccount.account_id == account_id
         ).first()
@@ -113,6 +117,11 @@ async def create_accounts_bulk(
         created.append(account)
 
     db.commit()
+
+    # Dispara backfill para as novas contas em background
+    for account in created:
+        background_tasks.add_task(_trigger_backfill_for_account, account)
+
     return created
 
 
@@ -173,3 +182,17 @@ async def _fetch_account_name(
     except Exception as e:
         logger.warning(f"Erro ao buscar nome de {act_id}: {e}")
     return None
+
+
+async def _trigger_backfill_for_account(account: FacebookAccount) -> None:
+    """Dispara backfill de 90 dias para uma conta recém-adicionada."""
+    from jobs.sync_facebook_backfill import _backfill_account
+    from database.core.timezone import now_sp
+    from datetime import timedelta
+
+    now = now_sp()
+    date_end = now.strftime("%Y-%m-%d")
+    date_start = (now - timedelta(days=90)).strftime("%Y-%m-%d")
+
+    logger.info(f"🚀 Auto-backfill iniciado para conta {account.account_id}")
+    await _backfill_account(account, date_start, date_end)

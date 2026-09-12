@@ -59,6 +59,7 @@ export interface UnidentifiedProduct {
 
 export interface CampaignData {
   id: string;
+  account_id: string;
   name: string;
   status: string;
   objective: string;

@@ -186,7 +186,7 @@ def filter_options(
         .all()
     )
 
-    platform_labels = {"kiwify": "Kiwify", "payt": "PayT", "api": "API"}
+    platform_labels = {"kiwify": "Kiwify", "payt": "PayT", "hubla": "Hubla", "cakto": "Cakto", "api": "API"}
 
     # Contas: todos os webhook endpoints cadastrados
     accounts = db.query(WebhookEndpoint).order_by(WebhookEndpoint.name).all()

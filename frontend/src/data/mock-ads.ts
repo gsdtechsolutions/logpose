@@ -76,4 +76,10 @@ export const adsData: AdRow[] = [
   // AdSet as-6-2: Weight Loss Interest
   { id: "ad-6-2-1", adSetId: "as-6-2", name: "Weight Loss Story", status: "completed", budget: 60, spend: 1000, revenue: 2200, sales: 18, roas: 2.2, cpa: 55.56, cpc: 2.08, clicks: 481, impressions: 19000, ctr: 2.53, profit: 1200, landingPageViews: 440, initiateCheckout: 32, connectRate: 91.5 },
   { id: "ad-6-2-2", adSetId: "as-6-2", name: "Weight Loss Before/After", status: "completed", budget: 50, spend: 800, revenue: 1800, sales: 16, roas: 2.25, cpa: 50.0, cpc: 2.22, clicks: 360, impressions: 14000, ctr: 2.57, profit: 1000, landingPageViews: 330, initiateCheckout: 26, connectRate: 91.7 },
+
+  // Cross-campaign recurring creatives (for Ads performance aggregation)
+  { id: "ad-2-1-3", adSetId: "as-2-1", name: "Criativo Depoimento Ana", status: "active", budget: 60, spend: 1400, revenue: 5600, sales: 35, roas: 4.0, cpa: 40.0, cpc: 1.70, clicks: 823, impressions: 25000, ctr: 3.29, profit: 4200, landingPageViews: 710, initiateCheckout: 60, connectRate: 86.3 },
+  { id: "ad-1-2-3", adSetId: "as-1-2", name: "AD289_B21 - Oferta Direta", status: "active", budget: 80, spend: 1200, revenue: 4200, sales: 28, roas: 3.5, cpa: 42.86, cpc: 1.75, clicks: 686, impressions: 21000, ctr: 3.27, profit: 3000, landingPageViews: 590, initiateCheckout: 45, connectRate: 86.0 },
+  { id: "ad-3-1-3", adSetId: "as-3-1", name: "AD289_B21 - Oferta Direta", status: "active", budget: 90, spend: 1600, revenue: 6400, sales: 38, roas: 4.0, cpa: 42.11, cpc: 1.65, clicks: 970, impressions: 29000, ctr: 3.34, profit: 4800, landingPageViews: 840, initiateCheckout: 65, connectRate: 86.6 },
 ];
+

@@ -1,7 +1,6 @@
 import { RiMetaLine, RiAddCircleLine } from "@remixicon/react";
 import { Button } from "@/components/ui/button";
 import { FacebookAdsGuide } from "./FacebookAdsGuide";
-import { ProxyModal } from "./ProxyModal";
 
 interface FacebookHeaderProps {
   onAddAccount: () => void;
@@ -23,7 +22,6 @@ export function FacebookHeader({ onAddAccount }: FacebookHeaderProps) {
       </div>
       <div className="flex items-center gap-2">
         <FacebookAdsGuide />
-        <ProxyModal />
         <Button onClick={onAddAccount} className="gap-1.5 h-9">
           <RiAddCircleLine className="size-4" />
           Adicionar Conta

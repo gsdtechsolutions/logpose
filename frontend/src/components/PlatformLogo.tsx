@@ -3,6 +3,8 @@ import { RiCodeSSlashLine } from "@remixicon/react";
 const PLATFORM_CONFIG = {
   kiwify: { label: "Kiwify", logo: "/platforms/kiwify.webp", type: "image" as const },
   payt: { label: "PayT", logo: "/platforms/payt.webp", type: "image" as const },
+  hubla: { label: "Hubla", logo: "/platforms/hubla.jpeg", type: "image" as const },
+  cakto: { label: "Cakto", logo: "/platforms/cakto.webp", type: "image" as const },
   api: { label: "API", logo: null, type: "badge" as const },
 } as const;
 
@@ -27,7 +29,10 @@ const textMap = {
 };
 
 export function PlatformLogo({ platform, size = "md", showLabel = true }: PlatformLogoProps) {
-  const config = PLATFORM_CONFIG[platform];
+  const config = PLATFORM_CONFIG[platform as Platform];
+  if (!config) {
+    return showLabel ? <span className={`${textMap[size]} font-semibold`}>{platform}</span> : null;
+  }
 
   if (config.type === "badge") {
     return (

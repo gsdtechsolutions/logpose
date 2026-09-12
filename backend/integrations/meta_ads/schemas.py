@@ -7,6 +7,7 @@ from pydantic import BaseModel
 
 class CampaignInsights(BaseModel):
     id: str
+    account_id: str = ""
     name: str
     status: str
     objective: str = ""

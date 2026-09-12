@@ -48,10 +48,10 @@ export function usePublishCampaign(
       ...(accountConfigs ? { account_configs: accountConfigs } : {}),
     };
 
-    await publish(payload, files, () => {
+    publish(payload, files, () => {
       resetForm();
-      navigate("/campaigns");
     });
+    navigate("/campaigns");
   }, [form, resetForm, navigate, publish]);
 
   return { isPublishing, handlePublish };

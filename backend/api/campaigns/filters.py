@@ -23,7 +23,7 @@ def campaign_filter_options(
         .all()
     )
 
-    platform_labels = {"kiwify": "Kiwify", "payt": "PayT", "api": "API"}
+    platform_labels = {"kiwify": "Kiwify", "payt": "PayT", "hubla": "Hubla", "cakto": "Cakto", "api": "API"}
 
     return {
         "products": [{"id": p.id, "name": p.name} for p in products],

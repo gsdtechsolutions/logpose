@@ -10,9 +10,11 @@ const chartConfig = {
   value: { label: "Faturamento" },
   Kiwify: { label: "Kiwify", color: "var(--chart-1)" },
   PayT: { label: "PayT", color: "var(--chart-2)" },
+  Hubla: { label: "Hubla", color: "var(--chart-3)" },
+  Cakto: { label: "Cakto", color: "var(--chart-4)" },
 } satisfies ChartConfig;
 
-const COLORS = ["var(--color-chart-1)", "var(--color-chart-2)", "var(--color-chart-3)"];
+const COLORS = ["var(--color-chart-1)", "var(--color-chart-2)", "var(--color-chart-3)", "var(--color-chart-4)", "var(--color-chart-5)"];
 
 function CustomTooltip({ active, payload }: any) {
   if (!active || !payload?.length) return null;

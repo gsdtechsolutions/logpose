@@ -30,24 +30,9 @@ interface AddItemModalProps {
 }
 
 const typeConfig: Record<ItemType, { label: string; desc: string; idLabel: string; idPlaceholder: string }> = {
-  checkout: {
-    label: "Checkout",
-    desc: "URL de checkout do produto",
-    idLabel: "URL do Checkout",
-    idPlaceholder: "Ex: https://pay.kiwify.com.br/...",
-  },
-  orderBump: {
-    label: "Order Bump",
-    desc: "Oferta complementar no checkout",
-    idLabel: "ID do Produto (Order Bump)",
-    idPlaceholder: "Ex: R3A674",
-  },
-  upsell: {
-    label: "Upsell",
-    desc: "Oferta pós-compra",
-    idLabel: "ID do Produto (Upsell)",
-    idPlaceholder: "Ex: RB8MM6",
-  },
+  checkout: { label: "Checkout", desc: "URL de checkout do produto", idLabel: "URL do Checkout", idPlaceholder: "Ex: https://..." },
+  orderBump: { label: "Order Bump", desc: "Oferta complementar no checkout", idLabel: "ID do Produto (Order Bump)", idPlaceholder: "Ex: R3A674" },
+  upsell: { label: "Upsell", desc: "Oferta pós-compra", idLabel: "ID do Produto (Upsell)", idPlaceholder: "Ex: RB8MM6" },
 };
 
 export function AddItemModal({ open, onOpenChange, onAdd, productName }: AddItemModalProps) {
@@ -143,6 +128,8 @@ export function AddItemModal({ open, onOpenChange, onAdd, productName }: AddItem
                     <SelectContent>
                       <SelectItem value="kiwify">Kiwify</SelectItem>
                       <SelectItem value="payt">PayT</SelectItem>
+                      <SelectItem value="hubla">Hubla</SelectItem>
+                      <SelectItem value="cakto">Cakto</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>

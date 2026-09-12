@@ -11,12 +11,20 @@ import { PlatformLogo } from "@/components/PlatformLogo";
 interface CreateWebhookModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onCreate: (platform: "kiwify" | "payt" | "api", name: string) => void;
+  onCreate: (platform: "kiwify" | "payt" | "hubla" | "cakto" | "api", name: string) => void;
   isLoading?: boolean;
 }
 
+const PLATFORMS_LIST = [
+  { id: "kiwify", label: "Kiwify", desc: "Produtos digitais" },
+  { id: "payt", label: "PayT", desc: "Gateway pagamento" },
+  { id: "hubla", label: "Hubla", desc: "Cursos e comunidades" },
+  { id: "cakto", label: "Cakto", desc: "Plataforma de pagamento" },
+  { id: "api", label: "API", desc: "Integração direta" },
+] as const;
+
 export function CreateWebhookModal({ open, onOpenChange, onCreate, isLoading }: CreateWebhookModalProps) {
-  const [platform, setPlatform] = useState<"kiwify" | "payt" | "api" | null>(null);
+  const [platform, setPlatform] = useState<"kiwify" | "payt" | "hubla" | "cakto" | "api" | null>(null);
   const [name, setName] = useState("");
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -34,7 +42,7 @@ export function CreateWebhookModal({ open, onOpenChange, onCreate, isLoading }: 
 
   return (
     <Dialog open={open} onOpenChange={handleClose}>
-      <DialogContent className="sm:max-w-[420px]">
+      <DialogContent className="sm:max-w-[460px]">
         <DialogHeader>
           <DialogTitle>Criar Endpoint</DialogTitle>
           <DialogDescription>
@@ -44,26 +52,26 @@ export function CreateWebhookModal({ open, onOpenChange, onCreate, isLoading }: 
         <form onSubmit={handleSubmit} className="space-y-5">
           <div className="space-y-2">
             <Label>Plataforma</Label>
-          <div className="grid grid-cols-3 gap-3">
-              {(["kiwify", "payt", "api"] as const).map((p) => (
+            <div className="grid grid-cols-2 gap-2.5">
+              {PLATFORMS_LIST.map((p) => (
                 <button
-                  key={p}
+                  key={p.id}
                   type="button"
-                  onClick={() => setPlatform(p)}
+                  onClick={() => setPlatform(p.id)}
                   disabled={isLoading}
                   className={cn(
-                    "flex flex-col items-center gap-1 rounded-lg border-2 p-4 transition-all cursor-pointer",
-                    platform === p
+                    "flex flex-col items-center gap-1 rounded-lg border-2 p-3 transition-all cursor-pointer",
+                    platform === p.id
                       ? "border-primary bg-primary/5"
                       : "border-border hover:border-primary/30"
                   )}
                 >
-                  <PlatformLogo platform={p} size="lg" showLabel={false} />
+                  <PlatformLogo platform={p.id} size="lg" showLabel={false} />
                   <span className="text-sm font-semibold">
-                    {p === "payt" ? "PayT" : p === "kiwify" ? "Kiwify" : "API"}
+                    {p.label}
                   </span>
-                  <span className="text-[10px] text-muted-foreground">
-                    {p === "kiwify" ? "Produtos digitais" : p === "payt" ? "Gateway pagamento" : "Integração direta"}
+                  <span className="text-[10px] text-muted-foreground text-center">
+                    {p.desc}
                   </span>
                 </button>
               ))}

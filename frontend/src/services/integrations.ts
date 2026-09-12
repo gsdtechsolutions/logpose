@@ -113,38 +113,7 @@ export async function syncFacebookAccounts(
   });
 }
 
-// ─── Proxy ───────────────────────────────────────────────────────────
 
-export interface ProxySettingsAPI {
-  id: number;
-  proxy_url: string;
-  proxy_type: string;
-  enabled: boolean;
-}
-
-export async function fetchProxy(): Promise<ProxySettingsAPI | null> {
-  return apiRequest<ProxySettingsAPI | null>("/facebook/proxy");
-}
-
-export async function saveProxy(proxyUrl: string, proxyType: string): Promise<ProxySettingsAPI> {
-  return apiRequest<ProxySettingsAPI>("/facebook/proxy", {
-    method: "POST",
-    body: { proxy_url: proxyUrl, proxy_type: proxyType },
-  });
-}
-
-export async function deleteProxy(): Promise<void> {
-  await apiRequest("/facebook/proxy", { method: "DELETE" });
-}
-
-export async function testProxy(
-  proxyUrl: string, proxyType: string,
-): Promise<{ success: boolean; message: string }> {
-  return apiRequest<{ success: boolean; message: string }>("/facebook/proxy/test", {
-    method: "POST",
-    body: { proxy_url: proxyUrl, proxy_type: proxyType },
-  });
-}
 
 // ─── Platforms (Webhooks) ────────────────────────────────────────────
 

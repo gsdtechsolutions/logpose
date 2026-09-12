@@ -116,7 +116,85 @@ export async function getMockData(endpoint: string, _options?: any): Promise<any
     };
   }
 
+  if (path === "/ads/data") {
+    const groups: Record<string, any[]> = {};
+    for (const ad of adsData) {
+      const adset = adSetsData.find((a) => a.id === ad.adSetId);
+      const camp = adset ? campaignsData.find((c) => c.id === adset.campaignId) : null;
+      const instance = {
+        id: ad.id,
+        name: ad.name,
+        status: ad.status,
+        ad_set_id: ad.adSetId,
+        ad_set_name: adset?.name || "Conjunto",
+        campaign_id: camp?.id || "",
+        campaign_name: camp?.name || "Campanha",
+        account_id: camp?.account_id || "act_123456789",
+        spend: ad.spend,
+        clicks: ad.clicks,
+        impressions: ad.impressions,
+        cpc: ad.cpc,
+        ctr: ad.ctr,
+        landing_page_views: ad.landingPageViews,
+        initiate_checkout: ad.initiateCheckout,
+        connect_rate: ad.connectRate,
+        sales: ad.sales,
+        revenue: ad.revenue,
+        profit: ad.profit,
+        roas: ad.roas,
+        cpa: ad.cpa,
+        budget: ad.budget,
+      };
+      const key = ad.name.trim().toLowerCase();
+      if (!groups[key]) groups[key] = [];
+      groups[key].push(instance);
+    }
+
+    const ads = Object.entries(groups).map(([key, instances]) => {
+      const spend = instances.reduce((s, i) => s + i.spend, 0);
+      const revenue = instances.reduce((s, i) => s + i.revenue, 0);
+      const sales = instances.reduce((s, i) => s + i.sales, 0);
+      const clicks = instances.reduce((s, i) => s + i.clicks, 0);
+      const impressions = instances.reduce((s, i) => s + i.impressions, 0);
+      const lpv = instances.reduce((s, i) => s + i.landing_page_views, 0);
+      const ic = instances.reduce((s, i) => s + i.initiate_checkout, 0);
+      const campNames = Array.from(new Set(instances.map((i) => i.campaign_name)));
+
+      return {
+        id: `adgroup_${key.replace(/\s+/g, "_")}`,
+        name: instances[0].name,
+        status: instances.some((i) => i.status === "active") ? "active" : "paused",
+        spend,
+        revenue,
+        profit: revenue - spend,
+        sales,
+        roas: spend > 0 ? Number((revenue / spend).toFixed(2)) : 0,
+        cpa: sales > 0 ? Number((spend / sales).toFixed(2)) : 0,
+        cpc: clicks > 0 ? Number((spend / clicks).toFixed(2)) : 0,
+        ctr: impressions > 0 ? Number(((clicks / impressions) * 100).toFixed(2)) : 0,
+        clicks,
+        impressions,
+        landing_page_views: lpv,
+        initiate_checkout: ic,
+        connect_rate: clicks > 0 ? Number(((lpv / clicks) * 100).toFixed(2)) : 0,
+        budget: instances.reduce((s, i) => s + i.budget, 0),
+        instances_count: instances.length,
+        campaigns_count: campNames.length,
+        campaign_names: campNames,
+        instances,
+        account_id: instances[0].account_id,
+      };
+    });
+
+    return { ads, last_sync_at: new Date().toISOString() };
+  }
+
+  if (path === "/ads/toggle") {
+    return { status: "ok", new_status: _options?.body?.active ? "active" : "paused" };
+  }
+
   if (path === "/campaigns/conversion") {
+
     return campaignsData.filter(c => c.id !== "unidentified").map(c => ({
       campaign_id: c.id,
       total_transactions: c.sales + 40,

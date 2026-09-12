@@ -20,6 +20,13 @@ export const defaultPresets: ColumnPreset[] = [
       "ic", "checkoutConversion", "sales", "checkoutToSaleRate",
     ],
   },
+  {
+    id: "anuncios",
+    name: "Anúncios",
+    columns: [
+      "name", "spend", "sales", "revenue", "profit", "roas", "cpa", "cpc", "ctr", "lpv", "ic",
+    ],
+  },
 ];
 
 export const allColumns: Record<string, string> = {

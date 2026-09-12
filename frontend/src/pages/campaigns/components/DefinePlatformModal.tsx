@@ -8,6 +8,8 @@ import { RiCheckLine } from "@remixicon/react";
 const PLATFORMS = [
   { value: "kiwify", label: "Kiwify" },
   { value: "payt", label: "PayT" },
+  { value: "hubla", label: "Hubla" },
+  { value: "cakto", label: "Cakto" },
 ];
 
 interface DefinePlatformModalProps {

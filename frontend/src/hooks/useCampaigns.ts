@@ -83,11 +83,18 @@ export function useCampaigns(dateStart: string, dateEnd: string) {
     entityId: string,
     entityType: "campaign" | "adset" | "ad",
     active: boolean,
+    campaignAccountId?: string,
     entityName?: string,
     metrics?: Record<string, number>,
     budget?: number,
   ) => {
-    if (!activeAccountId) {
+    let targetAccountId = activeAccountId;
+    if (campaignAccountId) {
+      const acc = accounts.find((a) => a.account_id === campaignAccountId);
+      if (acc) targetAccountId = acc.id;
+    }
+
+    if (!targetAccountId) {
       toast.error("Selecione uma conta", {
         description: "Para alterar o status, selecione uma conta específica no filtro ao invés de 'Todas'.",
       });
@@ -105,7 +112,7 @@ export function useCampaigns(dateStart: string, dateEnd: string) {
     }));
     try {
       await toggleCampaignStatus(
-        activeAccountId, entityId, entityType, active,
+        targetAccountId, entityId, entityType, active,
         entityName, metrics, budget,
       );
       invalidateCacheByPrefix("campaigns");
@@ -124,11 +131,18 @@ export function useCampaigns(dateStart: string, dateEnd: string) {
     entityId: string,
     entityType: "campaign" | "adset",
     dailyBudget: number,
+    campaignAccountId?: string,
     entityName?: string,
     budgetBefore?: number,
     metrics?: Record<string, number>,
   ) => {
-    if (!activeAccountId) {
+    let targetAccountId = activeAccountId;
+    if (campaignAccountId) {
+      const acc = accounts.find((a) => a.account_id === campaignAccountId);
+      if (acc) targetAccountId = acc.id;
+    }
+
+    if (!targetAccountId) {
       toast.error("Selecione uma conta", {
         description: "Para alterar o orçamento, selecione uma conta específica no filtro ao invés de 'Todas'.",
       });
@@ -140,7 +154,7 @@ export function useCampaigns(dateStart: string, dateEnd: string) {
     }));
     try {
       await updateBudget(
-        activeAccountId, entityId, entityType, dailyBudget,
+        targetAccountId, entityId, entityType, dailyBudget,
         entityName, budgetBefore, metrics,
       );
       invalidateCacheByPrefix("campaigns");

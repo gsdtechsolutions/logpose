@@ -51,7 +51,9 @@ export default function App() {
               <Route path="/dashboard" element={<DashboardPage />} />
               <Route path="/campaigns" element={<CampaignsPage />} />
               <Route path="/campaigns/create" element={<CampaignsCreatePage />} />
+              <Route path="/ads" element={<Navigate to="/campaigns" replace />} />
               <Route path="/sales" element={<SalesPage />} />
+
               <Route path="/customers" element={<CustomersPage />} />
               <Route path="/recovery" element={<RecoveryPage />} />
               <Route path="/refunds" element={<RefundsPage />} />

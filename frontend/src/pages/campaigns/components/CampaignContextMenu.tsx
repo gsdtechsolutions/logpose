@@ -5,6 +5,7 @@ import {
   RiPlayCircleLine, RiPauseCircleLine, RiPriceTag3Line,
   RiMoneyDollarCircleLine, RiVideoLine, RiShoppingBag2Line,
   RiInformationLine, RiBox3Line, RiFileDownloadLine, RiFileCopyLine,
+  RiExternalLinkLine,
 } from "@remixicon/react";
 
 interface CampaignContextMenuProps {
@@ -20,12 +21,13 @@ interface CampaignContextMenuProps {
   onExportCampaign: () => void;
   onDuplicateCampaign: () => void;
   onViewInfo: () => void;
+  onOpenFacebook: () => void;
 }
 
 export function CampaignContextMenu({
   children, isActive, isCbo = true, onToggle, onEditBudget, onEditTags,
   onDefineVideo, onDefineCheckout, onDefineProduct,
-  onExportCampaign, onDuplicateCampaign, onViewInfo,
+  onExportCampaign, onDuplicateCampaign, onViewInfo, onOpenFacebook,
 }: CampaignContextMenuProps) {
   return (
     <ContextMenu>
@@ -45,6 +47,10 @@ export function CampaignContextMenu({
               Ativar Campanha
             </>
           )}
+        </ContextMenuItem>
+        <ContextMenuItem onClick={onOpenFacebook} className="gap-2">
+          <RiExternalLinkLine className="size-4 text-muted-foreground" />
+          Abrir no Facebook
         </ContextMenuItem>
         {isCbo && (
           <ContextMenuItem onClick={onEditBudget} className="gap-2">

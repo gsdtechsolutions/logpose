@@ -11,13 +11,8 @@ import type { UpsellOption } from "@/types/sale";
 import { ProductSelect } from "@/components/ProductSelect";
 
 const presetLabels: Record<DatePreset, string> = {
-  today: "Hoje",
-  "7d": "Últimos 7 dias",
-  "14d": "Últimos 14 dias",
-  "30d": "Últimos 30 dias",
-  "90d": "Últimos 90 dias",
-  all: "Tempo inteiro",
-  custom: "Personalizado",
+  today: "Hoje", "7d": "Últimos 7 dias", "14d": "Últimos 14 dias",
+  "30d": "Últimos 30 dias", "90d": "Últimos 90 dias", all: "Tempo inteiro", custom: "Personalizado",
 };
 
 interface GlobalFilterBarProps {
@@ -57,11 +52,10 @@ export function GlobalFilterBar({
     filters.taxEnabled ? "1" : "",
     filters.opCostsEnabled ? "1" : "",
   ].filter(Boolean).length;
-  const platformLabels: Record<string, string> = { kiwify: "Kiwify", payt: "PayT", api: "API" };
+  const platformLabels: Record<string, string> = { kiwify: "Kiwify", payt: "PayT", hubla: "Hubla", cakto: "Cakto", api: "API" };
   const handleClear = () => onFiltersChange({
-    datePreset: "today", dateStart: "", dateEnd: "",
-    product: "all", platform: "all", accountSlug: "all",
-    taxEnabled: false, opCostsEnabled: false,
+    datePreset: "today", dateStart: "", dateEnd: "", product: "all", platform: "all",
+    accountSlug: "all", taxEnabled: false, opCostsEnabled: false,
   });
 
   return (

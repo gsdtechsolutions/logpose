@@ -1,15 +1,6 @@
 """
 Auto-criação de produtos a partir de dados do webhook.
-
-Quando um webhook chega, verificamos se o produto já existe.
-Se não existir, criamos automaticamente com os dados recebidos.
-Se existir, garantimos que o alias (nome completo) está registrado.
-
-Regra do "|":
-  Nome recebido: "Produto X | Ticket 247"
-  Nome base:     "Produto X"
-  Se "Produto X" já existe → pula criação, mas garante alias do nome completo.
-  Se não existe → cria "Produto X" + alias do nome completo.
+Garante que produto e checkout existam e gerencia aliases via regra do "|".
 """
 import logging
 from sqlalchemy.orm import Session
@@ -22,14 +13,12 @@ from database.models.transaction import PaymentPlatform
 
 logger = logging.getLogger(__name__)
 
-
-# ── Mapeamento de plataformas ────────────────────────────────
-# PaymentPlatform (webhook) → CheckoutPlatform (checkout)
-# Extensível: ao adicionar nova plataforma, só precisa adicionar aqui.
 PLATFORM_MAP: dict[PaymentPlatform, CheckoutPlatform | None] = {
     PaymentPlatform.KIWIFY: CheckoutPlatform.KIWIFY,
     PaymentPlatform.PAYT: CheckoutPlatform.PAYT,
-    PaymentPlatform.API: None,  # API direta não tem checkout
+    PaymentPlatform.HUBLA: CheckoutPlatform.HUBLA,
+    PaymentPlatform.CAKTO: CheckoutPlatform.CAKTO,
+    PaymentPlatform.API: None,
 }
 
 

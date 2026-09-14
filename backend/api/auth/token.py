@@ -1,6 +1,6 @@
 import os
 from datetime import datetime, timedelta, timezone
-from jose import jwt
+import jwt
 
 SECRET_KEY = os.getenv("SECRET_KEY", "convergeai-secret-key-change-in-production")
 ALGORITHM = "HS256"

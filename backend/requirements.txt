@@ -2,8 +2,10 @@ fastapi
 uvicorn[standard]
 sqlalchemy
 psycopg2-binary
-python-jose[cryptography]
+pyjwt
 bcrypt
+# cryptography>=45 ships Rust code that SIGILLs under Apple Virtualization.framework VMs (Docker Desktop on Apple Silicon)
+cryptography==44.0.3
 python-dotenv
 pydantic[email]
 alembic
